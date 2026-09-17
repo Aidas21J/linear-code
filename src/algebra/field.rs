@@ -7,7 +7,6 @@ pub trait Field {
     fn mul(a: &Self::Element, b: &Self::Element) -> Self::Element;
 
     const ZERO: Self::Element;
-    #[expect(unused)]
     const ONE: Self::Element;
 
     fn neg(a: &Self::Element) -> Self::Element;
