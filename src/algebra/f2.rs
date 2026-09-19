@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::algebra::{countable_underlying_set::CountableUnderlyingSet, field::Field};
+use crate::algebra::{field::Field, finite_underlying_set::FiniteUnderlyingSet};
 
 pub enum F2 {}
 
@@ -34,7 +34,7 @@ impl Field for F2 {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
 pub struct F2Element {
     value: bool,
 }
@@ -44,8 +44,8 @@ impl F2Element {
     const ONE: Self = Self { value: true };
 }
 
-impl CountableUnderlyingSet for F2Element {
-    fn iter() -> impl Iterator<Item = Self> {
+impl FiniteUnderlyingSet for F2Element {
+    fn iter() -> impl ExactSizeIterator<Item = Self> {
         [Self::ZERO, Self::ONE].into_iter()
     }
 }

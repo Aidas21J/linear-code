@@ -2,7 +2,6 @@ use std::fmt::{Debug, Display};
 
 use crate::algebra::field::Field;
 
-#[derive(Clone)]
 pub struct DMat<F: Field> {
     rows: usize,
     cols: usize,
@@ -54,6 +53,14 @@ impl<F: Field> DMat<F> {
         }
     }
 
+    pub fn from_row(row: Vec<F::Element>) -> Self {
+        Self {
+            rows: 1,
+            cols: row.len(),
+            data: row,
+        }
+    }
+
     pub fn from_rows(rows_data: Vec<Vec<F::Element>>) -> Option<Self> {
         let rows = rows_data.len();
         let cols = match rows_data.first() {
@@ -80,11 +87,11 @@ impl<F: Field> DMat<F> {
 // ---------------------------------------------------------------------------------------------------------------------
 
 impl<F: Field> DMat<F> {
-    fn rows_iter(&self) -> std::slice::ChunksExact<'_, F::Element> {
+    pub fn rows_iter(&self) -> std::slice::ChunksExact<'_, F::Element> {
         self.data.chunks_exact(self.cols)
     }
 
-    fn rows_iter_mut(&mut self) -> std::slice::ChunksExactMut<'_, F::Element> {
+    pub fn rows_iter_mut(&mut self) -> std::slice::ChunksExactMut<'_, F::Element> {
         self.data.chunks_exact_mut(self.cols)
     }
 }
@@ -96,11 +103,10 @@ impl<F: Field> DMat<F> {
 // ---------------------------------------------------------------------------------------------------------------------
 
 impl<F: Field> DMat<F> {
-    pub fn join(a: &Self, b: &Self) -> Self {
-        assert_eq!(
-            a.rows, b.rows,
-            "cannot join matrices with different number of rows"
-        );
+    pub fn join(a: &Self, b: &Self) -> Option<Self> {
+        if a.rows() != b.rows() {
+            return None;
+        }
 
         let rows = a.rows;
         let cols = a.cols + b.cols;
@@ -110,18 +116,20 @@ impl<F: Field> DMat<F> {
             .flat_map(|(a_row, b_row)| [a_row, b_row].concat())
             .collect();
 
-        Self { rows, cols, data }
+        Some(Self { rows, cols, data })
     }
 
-    pub fn split(&self, cols: usize) -> (Self, Self) {
-        assert!(cols <= self.cols, "cannot split more cols than matrix has");
+    pub fn split(&self, cols: usize) -> Option<(Self, Self)> {
+        if self.cols < cols {
+            return None;
+        }
 
         let rows = self.rows;
         let (lcols, rcols) = (cols, self.cols - cols);
         let (ldata, rdata): (Vec<&[_]>, Vec<&[_]>) =
             self.rows_iter().map(|row| row.split_at(lcols)).unzip();
 
-        (
+        Some((
             Self {
                 rows,
                 cols: lcols,
@@ -132,7 +140,7 @@ impl<F: Field> DMat<F> {
                 cols: rcols,
                 data: rdata.iter().flat_map(|row| row.to_vec()).collect(),
             },
-        )
+        ))
     }
 }
 
@@ -156,6 +164,30 @@ impl<F: Field> DMat<F> {
     }
 }
 
+impl<F: Field> std::ops::Neg for &DMat<F> {
+    type Output = DMat<F>;
+
+    fn neg(self) -> Self::Output {
+        DMat {
+            rows: self.rows,
+            cols: self.cols,
+            data: self.data.iter().map(|element| F::neg(element)).collect(),
+        }
+    }
+}
+
+impl<F: Field> std::ops::Neg for DMat<F> {
+    type Output = Self;
+
+    fn neg(mut self) -> Self::Output {
+        self.data
+            .iter_mut()
+            .for_each(|element| *element = F::neg(element));
+
+        self
+    }
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 // Matrix binary operations --------------------------------------------------------------------------------------------
@@ -163,28 +195,6 @@ impl<F: Field> DMat<F> {
 // ---------------------------------------------------------------------------------------------------------------------
 
 impl<F: Field> DMat<F> {
-    pub fn add(a: &Self, b: &Self) -> Self {
-        assert_eq!(
-            a.rows, b.rows,
-            "cannot add matrices with different number of rows"
-        );
-        assert_eq!(
-            a.cols, b.cols,
-            "cannot add matrices with different number of cols"
-        );
-
-        Self {
-            rows: a.rows,
-            cols: a.cols,
-            data: a
-                .data
-                .iter()
-                .zip(b.data.iter())
-                .map(|(x, y)| F::add(x, y))
-                .collect(),
-        }
-    }
-
     pub fn scalar_mul(s: &F::Element, m: &Self) -> Self {
         Self {
             rows: m.rows,
@@ -193,19 +203,35 @@ impl<F: Field> DMat<F> {
         }
     }
 
-    pub fn mul(a: &Self, b: &Self) -> Self {
-        assert_eq!(
-            a.cols, b.rows,
+    pub fn into_scalar_mul(s: &F::Element, m: Self) -> Self {
+        Self {
+            rows: m.rows,
+            cols: m.cols,
+            data: m
+                .data
+                .into_iter()
+                .map(|element| F::mul(s, &element))
+                .collect(),
+        }
+    }
+}
+
+impl<F: Field> std::ops::Mul for &DMat<F> {
+    type Output = DMat<F>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        debug_assert_eq!(
+            self.cols, rhs.rows,
             "matrix dimentions do not match for multiplication"
         );
 
-        let mut res = Self::zeros(a.rows, b.cols);
+        let mut res = DMat::<F>::zeros(self.rows, rhs.cols);
 
-        let a_rows = a.rows_iter();
+        let a_rows = self.rows_iter();
         let res_rows = res.rows_iter_mut();
 
         for (a_row, res_row) in a_rows.zip(res_rows) {
-            let b_rows = b.rows_iter();
+            let b_rows = rhs.rows_iter();
 
             for (a_val, b_row) in a_row.iter().zip(b_rows) {
                 for (res_val, b_val) in res_row.iter_mut().zip(b_row.iter()) {
@@ -215,6 +241,30 @@ impl<F: Field> DMat<F> {
         }
 
         res
+    }
+}
+
+impl<F: Field> std::ops::Mul<DMat<F>> for &DMat<F> {
+    type Output = DMat<F>;
+
+    fn mul(self, rhs: DMat<F>) -> Self::Output {
+        self * &rhs
+    }
+}
+
+impl<F: Field> std::ops::Mul<&DMat<F>> for DMat<F> {
+    type Output = DMat<F>;
+
+    fn mul(self, rhs: &DMat<F>) -> Self::Output {
+        &self * rhs
+    }
+}
+
+impl<F: Field> std::ops::Mul<DMat<F>> for DMat<F> {
+    type Output = DMat<F>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        &self * &rhs
     }
 }
 
@@ -271,3 +321,33 @@ impl<F: Field> PartialEq for DMat<F> {
 }
 
 impl<F: Field> Eq for DMat<F> {}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
+// Matrix hash ---------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
+
+impl<F: Field> std::hash::Hash for DMat<F> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.rows.hash(state);
+        self.cols.hash(state);
+        self.data.hash(state);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
+// Matrix cloning ------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
+
+impl<F: Field> Clone for DMat<F> {
+    fn clone(&self) -> Self {
+        Self {
+            rows: self.rows.clone(),
+            cols: self.cols.clone(),
+            data: self.data.clone(),
+        }
+    }
+}
