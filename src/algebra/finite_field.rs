@@ -1,9 +1,6 @@
 use crate::algebra::{field::Field, finite_underlying_set::FiniteUnderlyingSet};
 
-pub trait FiniteField: Field
-where
-    Self::Element: FiniteUnderlyingSet,
-{
+pub trait FiniteField: Field<Element: FiniteUnderlyingSet> {
     fn elements() -> impl ExactSizeIterator<Item = Self::Element> {
         Self::Element::iter()
     }

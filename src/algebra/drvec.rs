@@ -1,4 +1,4 @@
-use crate::algebra::{dcvec::DCVec, field::Field, matrix::DMat};
+use crate::algebra::{dcvec::DCVec, dmat::DMat, field::Field, finite_field::FiniteField};
 
 pub struct DRVec<F: Field> {
     cols: usize,
@@ -43,6 +43,79 @@ impl<F: Field> DRVec<F> {
         row[zeros_before] = F::ONE;
 
         Self::from_row(row)
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
+// Row vector iteration ------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
+
+pub struct DRVecIterator<F: FiniteField> {
+    field_generator: F::Element,
+    field_generator_inverse: F::Element,
+    next_state: Option<DRVec<F>>,
+}
+
+impl<F: FiniteField> DRVecIterator<F> {
+    pub fn new(cols: usize, field_generator: F::Element) -> Option<Self> {
+        let field_generator_inverse = F::recip(&field_generator)?;
+        Some(Self {
+            field_generator,
+            field_generator_inverse,
+            next_state: Some(DRVec {
+                cols,
+                data: vec![F::ZERO; cols],
+            }),
+        })
+    }
+}
+
+impl<F: FiniteField> Iterator for DRVecIterator<F> {
+    type Item = DRVec<F>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current_state = self.next_state.clone()?;
+        let mut next_state = current_state.clone();
+
+        enum IncrementingState {
+            NotIncremented,
+            Carried,
+            Incremented,
+        }
+
+        let go_to_next_val = |val: &mut F::Element| {
+            if *val == F::ZERO {
+                *val = F::ONE
+            } else if *val == self.field_generator_inverse {
+                *val = F::ZERO
+            } else {
+                *val = F::mul(val, &self.field_generator)
+            }
+        };
+
+        let mut increment_state = IncrementingState::NotIncremented;
+        for val in next_state.data.iter_mut() {
+            match increment_state {
+                IncrementingState::NotIncremented | IncrementingState::Carried => {
+                    go_to_next_val(val);
+                    if *val == F::ZERO {
+                        increment_state = IncrementingState::Carried;
+                    } else {
+                        increment_state = IncrementingState::Incremented;
+                    }
+                }
+                IncrementingState::Incremented => break,
+            }
+        }
+
+        self.next_state = match increment_state {
+            IncrementingState::Incremented => Some(next_state),
+            IncrementingState::NotIncremented | IncrementingState::Carried => None,
+        };
+
+        Some(current_state)
     }
 }
 
@@ -101,6 +174,10 @@ impl<F: Field> DRVec<F> {
 
     pub fn into_transpose(self) -> DCVec<F> {
         DCVec::<F>::from_col(self.data)
+    }
+
+    pub fn weight(&self) -> usize {
+        self.data.iter().filter(|&x| *x != F::ZERO).count()
     }
 }
 

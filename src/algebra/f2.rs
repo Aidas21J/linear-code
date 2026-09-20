@@ -1,6 +1,10 @@
 use std::fmt::Display;
 
-use crate::algebra::{field::Field, finite_underlying_set::FiniteUnderlyingSet};
+use rand::RngExt;
+
+use crate::algebra::{
+    field::Field, finite_underlying_set::FiniteUnderlyingSet, randomizable::Randomizable,
+};
 
 pub enum F2 {}
 
@@ -47,6 +51,14 @@ impl F2Element {
 impl FiniteUnderlyingSet for F2Element {
     fn iter() -> impl ExactSizeIterator<Item = Self> {
         [Self::ZERO, Self::ONE].into_iter()
+    }
+}
+
+impl Randomizable for F2Element {
+    fn generate_uniform(rng: &mut impl rand::prelude::Rng) -> Self {
+        F2Element {
+            value: rng.random(),
+        }
     }
 }
 

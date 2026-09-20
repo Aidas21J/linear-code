@@ -1,5 +1,5 @@
 use crate::{
-    algebra::{drvec::DRVec, f2::F2, field::Field},
+    algebra::{dmat::DMat, drvec::DRVec, f2::F2, field::Field},
     core::{binary_linear_code::BinaryLinearCode, linear_code::LinearCode as _},
 };
 
@@ -10,10 +10,19 @@ fn main() {
     test_encoding();
     println!();
     test_decoding();
+    println!();
+    test_random();
 }
 
 fn test_encoding() {
-    let code = BinaryLinearCode::new(6, 3).unwrap();
+    let parity = DMat::<F2>::from_rows(vec![
+        vec![F2::ONE, F2::ONE, F2::ZERO],
+        vec![F2::ZERO, F2::ONE, F2::ONE],
+        vec![F2::ONE, F2::ZERO, F2::ONE],
+    ])
+    .unwrap();
+
+    let code = BinaryLinearCode::from_parity(parity).unwrap();
 
     let codeword = DRVec::<F2>::from_row(vec![F2::ONE, F2::ZERO, F2::ONE]);
     let encoded = code.encode(&codeword);
@@ -31,7 +40,14 @@ fn test_encoding() {
 }
 
 fn test_decoding() {
-    let code = BinaryLinearCode::new(6, 3).unwrap();
+    let parity = DMat::<F2>::from_rows(vec![
+        vec![F2::ONE, F2::ONE, F2::ZERO],
+        vec![F2::ZERO, F2::ONE, F2::ONE],
+        vec![F2::ONE, F2::ZERO, F2::ONE],
+    ])
+    .unwrap();
+
+    let code = BinaryLinearCode::from_parity(parity).unwrap();
 
     let codeword = DRVec::<F2>::from_row(vec![
         F2::ONE,
@@ -50,6 +66,34 @@ fn test_decoding() {
 
     assert_eq!(
         decoded, expected,
+        "decoded vector doesn't match expectation"
+    );
+}
+
+fn test_random() {
+    let mut rng = rand::rng();
+
+    let (n, k) = (10, 7);
+    let code = BinaryLinearCode::new_random(n, k, &mut rng).unwrap();
+
+    let codeword = DRVec::<F2>::from_row(vec![
+        F2::ONE,
+        F2::ZERO,
+        F2::ONE,
+        F2::ONE,
+        F2::ZERO,
+        F2::ONE,
+        F2::ONE,
+    ]);
+    let encoded = code.encode(&codeword);
+    let decoded = code.decode(&encoded).unwrap();
+
+    println!("                 Codeword: {codeword}");
+    println!("         Encoded codeword: {encoded}");
+    println!("         Decoded codeword: {decoded}");
+
+    assert_eq!(
+        codeword, decoded,
         "decoded vector doesn't match expectation"
     );
 }

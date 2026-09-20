@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-use crate::algebra::field::Field;
+use crate::algebra::{field::Field, randomizable::Randomizable};
 
 pub struct DMat<F: Field> {
     rows: usize,
@@ -21,6 +21,10 @@ impl<F: Field> DMat<F> {
 
     pub fn cols(&self) -> usize {
         self.cols
+    }
+
+    pub fn dims(&self) -> (usize, usize) {
+        (self.rows, self.cols)
     }
 }
 
@@ -77,6 +81,17 @@ impl<F: Field> DMat<F> {
             cols,
             data: rows_data.into_iter().flatten().collect(),
         })
+    }
+
+    pub fn generate_uniform(rows: usize, cols: usize, rng: &mut impl rand::prelude::Rng) -> Self
+    where
+        F::Element: Randomizable,
+    {
+        let data: Vec<F::Element> = (0..(rows * cols))
+            .map(|_| F::Element::generate_uniform(rng))
+            .collect();
+
+        Self { rows, cols, data }
     }
 }
 
