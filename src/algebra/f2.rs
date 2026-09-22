@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use rand::RngExt;
 
 use crate::algebra::{
@@ -43,9 +41,23 @@ pub struct F2Element {
     value: bool,
 }
 
+impl From<bool> for F2Element {
+    fn from(value: bool) -> Self {
+        F2Element { value }
+    }
+}
+
 impl F2Element {
-    const ZERO: Self = Self { value: false };
-    const ONE: Self = Self { value: true };
+    pub const ZERO: Self = Self { value: false };
+    pub const ONE: Self = Self { value: true };
+
+    pub fn flip(&mut self) {
+        self.value = !self.value
+    }
+
+    pub fn flip_into(self) -> Self {
+        Self { value: !self.value }
+    }
 }
 
 impl FiniteUnderlyingSet for F2Element {
@@ -62,7 +74,7 @@ impl Randomizable for F2Element {
     }
 }
 
-impl Display for F2Element {
+impl std::fmt::Display for F2Element {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.value {
             false => write!(f, "0"),

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::algebra::{
     dmat::DMat,
     drvec::{DRVec, DRVecIterator},
+    field::Field,
     finite_field::FiniteField,
 };
 
@@ -51,12 +52,12 @@ pub trait LinearCode {
         self.generator().rows()
     }
 
-    fn encode(&self, codeword: &DRVec<Self::Field>) -> DRVec<Self::Field> {
+    fn encode(&self, codeword: DRVec<Self::Field>) -> DRVec<Self::Field> {
         codeword * &self.generator()
     }
 
-    fn decode(&self, codeword: &DRVec<Self::Field>) -> Option<DRVec<Self::Field>> {
-        let mut r = codeword.clone();
+    fn decode(&self, codeword: DRVec<Self::Field>) -> Option<DRVec<Self::Field>> {
+        let mut r = codeword;
 
         for i in 1..=r.cols() {
             let syndrome = (self.parity_check() * r.transpose()).into_transpose();
@@ -81,5 +82,48 @@ pub trait LinearCode {
         }
 
         r.split(self.n() - self.k()).map(|(_, original)| original)
+    }
+
+    fn encode_buffer(
+        &self,
+        buffer: &Vec<<Self::Field as Field>::Element>,
+    ) -> (Vec<<Self::Field as Field>::Element>, usize) {
+        let chunks_iter = buffer.chunks_exact(self.k());
+        let remainder_chunk = chunks_iter.remainder();
+
+        let mut data = chunks_iter
+            .map(DRVec::from_row_slice)
+            .map(|word| self.encode(word))
+            .flat_map(DRVec::into_data)
+            .collect::<Vec<_>>();
+
+        let mut pad_size = 0;
+        if !remainder_chunk.is_empty() {
+            let mut last_chunk = remainder_chunk.to_vec();
+
+            pad_size = self.k() - last_chunk.len();
+            last_chunk.resize(self.k(), <Self::Field as Field>::ZERO);
+
+            let word = DRVec::from_row(last_chunk);
+            data.extend(self.encode(word).into_data());
+        }
+
+        (data, pad_size)
+    }
+
+    fn decode_buffer(
+        &self,
+        buffer: &Vec<<Self::Field as Field>::Element>,
+        pad_size: usize,
+    ) -> Vec<<Self::Field as Field>::Element> {
+        let decode_result_on_fail = DRVec::from_row(vec![Self::Field::ZERO; self.k()]);
+        let chunks_iter = buffer.chunks_exact(self.n());
+
+        chunks_iter
+            .map(DRVec::from_row_slice)
+            .map(|word| self.decode(word).unwrap_or(decode_result_on_fail.clone()))
+            .flat_map(DRVec::into_data)
+            .take(buffer.len() * self.k() - pad_size)
+            .collect::<Vec<_>>()
     }
 }

@@ -15,6 +15,10 @@ impl<F: Field> DRVec<F> {
     pub fn cols(&self) -> usize {
         self.cols
     }
+
+    pub fn into_data(self) -> Vec<F::Element> {
+        self.data
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -24,6 +28,13 @@ impl<F: Field> DRVec<F> {
 // ---------------------------------------------------------------------------------------------------------------------
 
 impl<F: Field> DRVec<F> {
+    pub fn from_row_slice(row: &[F::Element]) -> Self {
+        Self {
+            cols: row.len(),
+            data: row.to_vec(),
+        }
+    }
+
     pub fn from_row(row: Vec<F::Element>) -> Self {
         Self {
             cols: row.len(),
@@ -51,6 +62,12 @@ impl<F: Field> DRVec<F> {
 // Row vector iteration ------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
+
+impl<F: Field> DRVec<F> {
+    pub fn iter(&self) -> impl Iterator<Item = &F::Element> {
+        self.data.iter()
+    }
+}
 
 pub struct DRVecIterator<F: FiniteField> {
     field_generator: F::Element,
