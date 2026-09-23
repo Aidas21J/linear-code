@@ -1,8 +1,6 @@
-use rand::RngExt;
+use rand::RngExt as _;
 
-use crate::algebra::{
-    field::Field, finite_underlying_set::FiniteUnderlyingSet, randomizable::Randomizable,
-};
+use super::{field::Field, finite_underlying_set::FiniteUnderlyingSet, randomizable::Randomizable};
 
 pub enum F2 {}
 
@@ -47,16 +45,24 @@ impl From<bool> for F2Element {
     }
 }
 
+impl std::str::FromStr for F2Element {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "0" => Ok(Self::ZERO),
+            "1" => Ok(Self::ONE),
+            _ => Err(format!("cannot parse F2 element: {s}")),
+        }
+    }
+}
+
 impl F2Element {
     pub const ZERO: Self = Self { value: false };
     pub const ONE: Self = Self { value: true };
 
     pub fn flip(&mut self) {
         self.value = !self.value
-    }
-
-    pub fn flip_into(self) -> Self {
-        Self { value: !self.value }
     }
 }
 

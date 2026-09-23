@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{
+use crate::app::{
     algebra::{dmat::DMat, drvec::DRVec, f2::F2},
     core::linear_code::LinearCode,
 };

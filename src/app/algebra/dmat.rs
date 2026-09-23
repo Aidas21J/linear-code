@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-use crate::algebra::{field::Field, randomizable::Randomizable};
+use super::{field::Field, randomizable::Randomizable};
 
 pub struct DMat<F: Field> {
     rows: usize,
@@ -80,6 +80,18 @@ impl<F: Field> DMat<F> {
             rows,
             cols,
             data: rows_data.into_iter().flatten().collect(),
+        })
+    }
+
+    pub fn from_data(rows: usize, data: Vec<F::Element>) -> Option<Self> {
+        if data.len() % rows != 0 {
+            return None;
+        }
+
+        Some(Self {
+            rows,
+            cols: data.len() / rows,
+            data,
         })
     }
 

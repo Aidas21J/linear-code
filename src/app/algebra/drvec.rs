@@ -1,4 +1,4 @@
-use crate::algebra::{dcvec::DCVec, dmat::DMat, field::Field, finite_field::FiniteField};
+use super::{dcvec::DCVec, dmat::DMat, field::Field, finite_field::FiniteField};
 
 pub struct DRVec<F: Field> {
     cols: usize,
@@ -66,6 +66,10 @@ impl<F: Field> DRVec<F> {
 impl<F: Field> DRVec<F> {
     pub fn iter(&self) -> impl Iterator<Item = &F::Element> {
         self.data.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut F::Element> {
+        self.data.iter_mut()
     }
 }
 
@@ -205,6 +209,20 @@ impl<F: Field> DRVec<F> {
 // ---------------------------------------------------------------------------------------------------------------------
 
 impl<F: Field> DRVec<F> {
+    pub fn hamming_distance(a: &Self, b: &Self) -> usize {
+        debug_assert_eq!(
+            a.data.len(),
+            b.data.len(),
+            "cannot calculate hamming distance between different sized vectors"
+        );
+
+        a.data
+            .iter()
+            .zip(b.data.iter())
+            .filter(|(a_i, b_i)| a_i != b_i)
+            .count()
+    }
+
     pub fn scalar_mul(s: &F::Element, m: &Self) -> Self {
         Self {
             cols: m.cols,
@@ -351,8 +369,22 @@ where
             .iter()
             .map(|n| n.to_string())
             .collect::<Vec<_>>()
-            .join(" ");
-        write!(f, "|{self_str}|")
+            .join("");
+        write!(f, "{self_str}")
+    }
+}
+
+impl<F: Field> std::str::FromStr for DRVec<F> {
+    type Err = <F::Element as std::str::FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let row = s
+            .chars()
+            .map(|c| c.to_string())
+            .map(|str| F::Element::from_str(str.as_str()))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Self::from_row(row))
     }
 }
 

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::algebra::{
+use crate::app::algebra::{
     dmat::DMat,
     drvec::{DRVec, DRVecIterator},
     field::Field,
@@ -84,6 +84,7 @@ pub trait LinearCode {
         r.split(self.n() - self.k()).map(|(_, original)| original)
     }
 
+    #[expect(unused)]
     fn encode_buffer(
         &self,
         buffer: &Vec<<Self::Field as Field>::Element>,
@@ -111,6 +112,7 @@ pub trait LinearCode {
         (data, pad_size)
     }
 
+    #[expect(unused)]
     fn decode_buffer(
         &self,
         buffer: &Vec<<Self::Field as Field>::Element>,

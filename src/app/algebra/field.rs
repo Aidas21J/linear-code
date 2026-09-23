@@ -1,4 +1,4 @@
-use crate::algebra::underlying_set::UnderlyingSet;
+use super::underlying_set::UnderlyingSet;
 
 pub trait Field {
     type Element: UnderlyingSet;

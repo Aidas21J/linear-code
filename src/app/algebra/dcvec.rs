@@ -1,4 +1,4 @@
-use crate::algebra::{dmat::DMat, drvec::DRVec, field::Field};
+use super::{dmat::DMat, drvec::DRVec, field::Field};
 
 pub struct DCVec<F: Field> {
     rows: usize,
