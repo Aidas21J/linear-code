@@ -6,12 +6,12 @@ pub trait Channel<F: FiniteField>
 where
     F::Element: Randomizable,
 {
-    fn send_mut(&self, value: &mut F::Element, rng: &mut impl Rng);
+    fn send_element(&self, value: &mut F::Element, rng: &mut impl Rng);
 
-    fn send_drvec(&self, mut values: DRVec<F>, rng: &mut impl Rng) -> DRVec<F> {
+    fn send(&self, mut values: DRVec<F>, rng: &mut impl Rng) -> DRVec<F> {
         values
             .iter_mut()
-            .for_each(|value| self.send_mut(value, rng));
+            .for_each(|value| self.send_element(value, rng));
         values
     }
 }

@@ -9,6 +9,6 @@ pub trait Field {
     const ZERO: Self::Element;
     const ONE: Self::Element;
 
-    fn neg(a: &Self::Element) -> Self::Element;
-    fn recip(a: &Self::Element) -> Option<Self::Element>;
+    fn neg(a: Self::Element) -> Self::Element;
+    fn recip(a: Self::Element) -> Option<Self::Element>;
 }

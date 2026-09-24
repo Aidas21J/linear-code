@@ -1,7 +1,6 @@
 use super::{dmat::DMat, drvec::DRVec, field::Field};
 
 pub struct DCVec<F: Field> {
-    rows: usize,
     data: Vec<F::Element>,
 }
 
@@ -13,7 +12,7 @@ pub struct DCVec<F: Field> {
 
 impl<F: Field> DCVec<F> {
     pub fn rows(&self) -> usize {
-        self.rows
+        self.data.len()
     }
 }
 
@@ -23,19 +22,15 @@ impl<F: Field> DCVec<F> {
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 
-impl<F: Field> DCVec<F> {
-    pub fn from_col(column: Vec<F::Element>) -> Self {
-        Self {
-            rows: column.len(),
-            data: column,
-        }
+impl<F: Field> From<Vec<F::Element>> for DCVec<F> {
+    fn from(col: Vec<F::Element>) -> Self {
+        Self { data: col }
     }
+}
 
+impl<F: Field> DCVec<F> {
     pub fn zeros(rows: usize) -> Self {
-        Self {
-            rows: rows,
-            data: vec![F::ZERO; rows],
-        }
+        vec![F::ZERO; rows].into()
     }
 }
 
@@ -47,11 +42,11 @@ impl<F: Field> DCVec<F> {
 
 impl<F: Field> DCVec<F> {
     pub fn transpose(&self) -> DRVec<F> {
-        DRVec::<F>::from_row(self.data.clone())
+        self.data.clone().into()
     }
 
     pub fn into_transpose(self) -> DRVec<F> {
-        DRVec::<F>::from_row(self.data)
+        self.data.into()
     }
 }
 
@@ -83,14 +78,6 @@ impl<F: Field> std::ops::Mul<&DCVec<F>> for &DMat<F> {
     }
 }
 
-impl<F: Field> std::ops::Mul<DCVec<F>> for &DMat<F> {
-    type Output = DCVec<F>;
-
-    fn mul(self, rhs: DCVec<F>) -> Self::Output {
-        self * &rhs
-    }
-}
-
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 // Column vector formatting --------------------------------------------------------------------------------------------
@@ -102,10 +89,7 @@ where
     F::Element: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("DCVec")
-            .field("rows", &self.rows)
-            .field("data", &self.data)
-            .finish()
+        f.debug_struct("DCVec").field("data", &self.data).finish()
     }
 }
 
@@ -117,10 +101,10 @@ where
         let self_str: String = self
             .data
             .iter()
-            .map(|n| n.to_string())
+            .map(|n| format!("|{n}|"))
             .collect::<Vec<_>>()
-            .join(" ");
-        write!(f, "|{self_str}|")
+            .join("\n");
+        write!(f, "{self_str}")
     }
 }
 
@@ -132,7 +116,7 @@ where
 
 impl<F: Field> PartialEq for DCVec<F> {
     fn eq(&self, other: &Self) -> bool {
-        self.rows == other.rows && self.data == other.data
+        self.data == other.data
     }
 }
 
@@ -146,7 +130,6 @@ impl<F: Field> Eq for DCVec<F> {}
 
 impl<F: Field> std::hash::Hash for DCVec<F> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.rows.hash(state);
         self.data.hash(state);
     }
 }
@@ -160,7 +143,6 @@ impl<F: Field> std::hash::Hash for DCVec<F> {
 impl<F: Field> Clone for DCVec<F> {
     fn clone(&self) -> Self {
         Self {
-            rows: self.rows.clone(),
             data: self.data.clone(),
         }
     }

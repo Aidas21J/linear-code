@@ -57,32 +57,6 @@ impl<F: Field> DMat<F> {
         }
     }
 
-    pub fn from_row(row: Vec<F::Element>) -> Self {
-        Self {
-            rows: 1,
-            cols: row.len(),
-            data: row,
-        }
-    }
-
-    pub fn from_rows(rows_data: Vec<Vec<F::Element>>) -> Option<Self> {
-        let rows = rows_data.len();
-        let cols = match rows_data.first() {
-            Some(row) => row.len(),
-            None => return None,
-        };
-
-        if rows_data.iter().any(|row| row.len() != cols) {
-            return None;
-        }
-
-        Some(Self {
-            rows,
-            cols,
-            data: rows_data.into_iter().flatten().collect(),
-        })
-    }
-
     pub fn from_data(rows: usize, data: Vec<F::Element>) -> Option<Self> {
         if data.len() % rows != 0 {
             return None;
@@ -160,12 +134,12 @@ impl<F: Field> DMat<F> {
             Self {
                 rows,
                 cols: lcols,
-                data: ldata.iter().flat_map(|row| row.to_vec()).collect(),
+                data: ldata.into_iter().flatten().cloned().collect(),
             },
             Self {
                 rows,
                 cols: rcols,
-                data: rdata.iter().flat_map(|row| row.to_vec()).collect(),
+                data: rdata.into_iter().flatten().cloned().collect(),
             },
         ))
     }
@@ -184,8 +158,8 @@ impl<F: Field> DMat<F> {
             .collect();
 
         Self {
-            rows: self.cols,
-            cols: self.rows,
+            rows: self.cols(),
+            cols: self.rows(),
             data,
         }
     }
@@ -196,9 +170,13 @@ impl<F: Field> std::ops::Neg for &DMat<F> {
 
     fn neg(self) -> Self::Output {
         DMat {
-            rows: self.rows,
-            cols: self.cols,
-            data: self.data.iter().map(|element| F::neg(element)).collect(),
+            rows: self.rows(),
+            cols: self.cols(),
+            data: self
+                .data
+                .iter()
+                .map(|element| F::neg(element.clone()))
+                .collect(),
         }
     }
 }
@@ -206,12 +184,16 @@ impl<F: Field> std::ops::Neg for &DMat<F> {
 impl<F: Field> std::ops::Neg for DMat<F> {
     type Output = Self;
 
-    fn neg(mut self) -> Self::Output {
-        self.data
-            .iter_mut()
-            .for_each(|element| *element = F::neg(element));
-
-        self
+    fn neg(self) -> Self::Output {
+        DMat {
+            rows: self.rows(),
+            cols: self.cols(),
+            data: self
+                .data
+                .into_iter()
+                .map(|element| F::neg(element))
+                .collect(),
+        }
     }
 }
 
@@ -224,16 +206,16 @@ impl<F: Field> std::ops::Neg for DMat<F> {
 impl<F: Field> DMat<F> {
     pub fn scalar_mul(s: &F::Element, m: &Self) -> Self {
         Self {
-            rows: m.rows,
-            cols: m.cols,
+            rows: m.rows(),
+            cols: m.cols(),
             data: m.data.iter().map(|element| F::mul(s, element)).collect(),
         }
     }
 
     pub fn into_scalar_mul(s: &F::Element, m: Self) -> Self {
         Self {
-            rows: m.rows,
-            cols: m.cols,
+            rows: m.rows(),
+            cols: m.cols(),
             data: m
                 .data
                 .into_iter()
@@ -248,11 +230,12 @@ impl<F: Field> std::ops::Mul for &DMat<F> {
 
     fn mul(self, rhs: Self) -> Self::Output {
         debug_assert_eq!(
-            self.cols, rhs.rows,
+            self.cols(),
+            rhs.rows(),
             "matrix dimentions do not match for multiplication"
         );
 
-        let mut res = DMat::<F>::zeros(self.rows, rhs.cols);
+        let mut res = DMat::<F>::zeros(self.rows(), rhs.cols());
 
         let a_rows = self.rows_iter();
         let res_rows = res.rows_iter_mut();
@@ -322,12 +305,11 @@ where
         let self_str: String = self
             .rows_iter()
             .map(|row| {
-                let row_str = row
-                    .iter()
-                    .map(|n| n.to_string())
+                std::iter::once("|".to_string())
+                    .chain(row.iter().map(|n| n.to_string()))
+                    .chain(std::iter::once("|".to_string()))
                     .collect::<Vec<_>>()
-                    .join(" ");
-                "|".to_string() + &row_str + "|"
+                    .join(" ")
             })
             .collect::<Vec<_>>()
             .join("\n");

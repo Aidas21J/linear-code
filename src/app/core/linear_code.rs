@@ -25,15 +25,15 @@ pub trait LinearCode {
         DMat::join(&DMat::identity(n - k), &minus_a_t)
     }
 
-    fn syndrome_min_weight_from_parity_check<F: FiniteField>(
-        parity_check: &DMat<F>,
-    ) -> Option<HashMap<DRVec<F>, usize>> {
+    fn syndrome_min_weight_from_parity_check(
+        parity_check: &DMat<Self::Field>,
+    ) -> Option<HashMap<DRVec<Self::Field>, usize>> {
         let received_word_cols = parity_check.cols();
-        let mut coset_leader_weights: HashMap<DRVec<F>, usize> = HashMap::new();
+        let mut coset_leader_weights: HashMap<DRVec<_>, usize> = HashMap::new();
 
-        for codeword in DRVecIterator::<F>::new(received_word_cols, F::ONE)? {
+        for codeword in DRVecIterator::new(received_word_cols, <Self::Field as Field>::ONE)? {
             let w = codeword.weight();
-            let syndrome = (parity_check * codeword.into_transpose()).into_transpose();
+            let syndrome = (parity_check * &codeword.into_transpose()).into_transpose();
 
             coset_leader_weights
                 .entry(syndrome)
@@ -52,15 +52,15 @@ pub trait LinearCode {
         self.generator().rows()
     }
 
-    fn encode(&self, codeword: DRVec<Self::Field>) -> DRVec<Self::Field> {
-        codeword * &self.generator()
+    fn encode(&self, codeword: &DRVec<Self::Field>) -> DRVec<Self::Field> {
+        codeword * self.generator()
     }
 
     fn decode(&self, codeword: DRVec<Self::Field>) -> Option<DRVec<Self::Field>> {
         let mut r = codeword;
 
         for i in 1..=r.cols() {
-            let syndrome = (self.parity_check() * r.transpose()).into_transpose();
+            let syndrome = (self.parity_check() * &r.transpose()).into_transpose();
             let w = self.get_syndrome_min_weight(&syndrome)?;
 
             if *w == 0 {
@@ -68,10 +68,10 @@ pub trait LinearCode {
             }
 
             for coef in Self::Field::non_zero_elements() {
-                let e_i = DRVec::e_i(i - 1, r.cols() - i);
+                let e_i = DRVec::e(i - 1, r.cols() - i);
                 let new_r = &r + DRVec::into_scalar_mul(&coef, e_i);
 
-                let new_syndrome = (self.parity_check() * new_r.transpose()).into_transpose();
+                let new_syndrome = (self.parity_check() * &new_r.transpose()).into_transpose();
                 let new_w = self.get_syndrome_min_weight(&new_syndrome)?;
 
                 if new_w < w {
@@ -81,51 +81,6 @@ pub trait LinearCode {
             }
         }
 
-        r.split(self.n() - self.k()).map(|(_, original)| original)
-    }
-
-    #[expect(unused)]
-    fn encode_buffer(
-        &self,
-        buffer: &Vec<<Self::Field as Field>::Element>,
-    ) -> (Vec<<Self::Field as Field>::Element>, usize) {
-        let chunks_iter = buffer.chunks_exact(self.k());
-        let remainder_chunk = chunks_iter.remainder();
-
-        let mut data = chunks_iter
-            .map(DRVec::from_row_slice)
-            .map(|word| self.encode(word))
-            .flat_map(DRVec::into_data)
-            .collect::<Vec<_>>();
-
-        let mut pad_size = 0;
-        if !remainder_chunk.is_empty() {
-            let mut last_chunk = remainder_chunk.to_vec();
-
-            pad_size = self.k() - last_chunk.len();
-            last_chunk.resize(self.k(), <Self::Field as Field>::ZERO);
-
-            let word = DRVec::from_row(last_chunk);
-            data.extend(self.encode(word).into_data());
-        }
-
-        (data, pad_size)
-    }
-
-    #[expect(unused)]
-    fn decode_buffer(
-        &self,
-        buffer: &Vec<<Self::Field as Field>::Element>,
-        pad_size: usize,
-    ) -> Vec<<Self::Field as Field>::Element> {
-        let decode_result_on_fail = DRVec::from_row(vec![Self::Field::ZERO; self.k()]);
-        let chunks_iter = buffer.chunks_exact(self.n());
-
-        chunks_iter
-            .map(DRVec::from_row_slice)
-            .map(|word| self.decode(word).unwrap_or(decode_result_on_fail.clone()))
-            .flat_map(DRVec::into_data)
-            .take(buffer.len() * self.k() - pad_size)
-            .collect::<Vec<_>>()
+        r.split_off(self.n() - self.k()).into()
     }
 }

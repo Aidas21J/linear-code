@@ -22,12 +22,12 @@ impl Field for F2 {
     const ZERO: Self::Element = Self::Element::ZERO;
     const ONE: Self::Element = Self::Element::ONE;
 
-    fn neg(a: &Self::Element) -> Self::Element {
-        a.clone()
+    fn neg(a: Self::Element) -> Self::Element {
+        a
     }
 
-    fn recip(a: &Self::Element) -> Option<Self::Element> {
-        match a.clone() {
+    fn recip(a: Self::Element) -> Option<Self::Element> {
+        match a {
             Self::ZERO => None,
             non_zero_val => Some(non_zero_val),
         }
@@ -42,6 +42,12 @@ pub struct F2Element {
 impl From<bool> for F2Element {
     fn from(value: bool) -> Self {
         F2Element { value }
+    }
+}
+
+impl From<F2Element> for u8 {
+    fn from(element: F2Element) -> Self {
+        element.value as u8
     }
 }
 

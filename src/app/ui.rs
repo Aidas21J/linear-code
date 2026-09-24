@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Write as _},
+    io::{self, Read as _, Write as _},
     str::FromStr,
 };
 
@@ -54,6 +54,32 @@ pub fn get_from_line<T: FromStr>(message: &str) -> T {
     }
 }
 
+pub fn get_text(message: &str) -> String {
+    loop {
+        println!("{message}:");
+        io::stdout().flush().unwrap();
+
+        let mut input_str = String::new();
+        if io::stdin().read_to_string(&mut input_str).is_err() {
+            println!("Failed to read input. Try again.");
+            continue;
+        }
+
+        return input_str;
+    }
+}
+
+pub fn get_from_file() -> String {
+    loop {
+        let path: String = get_from_line("Enter filepath");
+
+        match std::fs::read_to_string(path) {
+            Ok(file_content) => return file_content,
+            Err(_) => println!("Failed to open file. Try again"),
+        }
+    }
+}
+
 pub fn get_row_vector<F: Field>(message: &str, expected_cols: usize) -> DRVec<F>
 where
     F::Element: std::fmt::Display,
@@ -104,7 +130,7 @@ where
                 .collect::<Vec<String>>()
                 .chunks(cols)
                 .map(|row| row.join(" "))
-                .map(|row_str| format!("|{row_str}|").to_string())
+                .map(|row_str| format!("|{row_str}|"))
                 .collect::<Vec<_>>()
                 .join("\n");
 
@@ -112,7 +138,7 @@ where
             println!("{message}:");
             println!("{data_str}");
 
-            let x = get_from_line::<F::Element>("Enter x value");
+            let x: F::Element = get_from_line("Enter x value");
             data.push(x);
         }
     }

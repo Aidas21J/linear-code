@@ -16,7 +16,7 @@ impl BinaryChannel {
 }
 
 impl Channel<F2> for BinaryChannel {
-    fn send_mut(&self, value: &mut F2Element, rng: &mut impl Rng) {
+    fn send_element(&self, value: &mut F2Element, rng: &mut impl Rng) {
         if rng.random::<f64>() < self.p_e {
             value.flip()
         }
