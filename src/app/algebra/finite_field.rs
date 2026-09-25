@@ -1,13 +1,10 @@
-use super::{field::Field, finite_underlying_set::FiniteUnderlyingSet};
+use super::field::Field;
 
-pub trait FiniteField: Field<Element: FiniteUnderlyingSet> {
-    fn elements() -> impl ExactSizeIterator<Item = Self::Element> {
-        Self::Element::iter()
-    }
+pub trait FiniteField: Field {
+    const GENERATOR: Self::Element;
+    const GENERATOR_INVERSE: Self::Element;
 
-    fn non_zero_elements() -> impl Iterator<Item = Self::Element> {
-        Self::elements().filter(|x| *x != Self::ZERO)
-    }
+    fn non_zero_elements() -> impl ExactSizeIterator<Item = Self::Element>;
+    #[expect(unused)]
+    fn elements() -> impl ExactSizeIterator<Item = Self::Element>;
 }
-
-impl<F: Field> FiniteField for F where F::Element: FiniteUnderlyingSet {}

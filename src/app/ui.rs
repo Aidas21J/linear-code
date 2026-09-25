@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Read as _, Write as _},
+    io::{Read as _, Write as _, stderr, stdin, stdout},
     str::FromStr,
 };
 
@@ -7,7 +7,8 @@ use crate::app::algebra::{dmat::DMat, drvec::DRVec, field::Field};
 
 pub fn get_yes_no(message: &str, default: Option<bool>) -> bool {
     loop {
-        print!(
+        let _ = stdout().flush();
+        eprint!(
             "{message} {default_option}: ",
             default_option = match default {
                 Some(false) => "(y/N)",
@@ -15,11 +16,11 @@ pub fn get_yes_no(message: &str, default: Option<bool>) -> bool {
                 None => "(y/n)",
             }
         );
-        io::stdout().flush().unwrap();
+        let _ = stderr().flush();
 
         let mut input_str = String::new();
-        if io::stdin().read_line(&mut input_str).is_err() {
-            println!("Failed to read input. Try again.");
+        if let Err(e) = stdin().read_line(&mut input_str) {
+            eprintln!("Failed to read input: {e}. Try again.");
             continue;
         }
 
@@ -30,38 +31,40 @@ pub fn get_yes_no(message: &str, default: Option<bool>) -> bool {
             },
             "n" | "no" => return false,
             "y" | "yes" => return true,
-            _ => println!("Invalid input. Try again."),
+            _ => eprintln!("Invalid input. Try again."),
         }
     }
 }
 
 pub fn get_from_line<T: FromStr>(message: &str) -> T {
     loop {
-        print!("{message}: ");
-        io::stdout().flush().unwrap();
+        let _ = stdout().flush();
+        eprint!("{message}: ");
+        let _ = stderr().flush();
 
         let mut input_str = String::new();
-        if io::stdin().read_line(&mut input_str).is_err() {
-            println!("Failed to read input. Try again.");
+        if let Err(e) = stdin().read_line(&mut input_str) {
+            eprintln!("Failed to read input: {e}. Try again.");
             continue;
         }
         input_str = input_str.replace(",", ".");
 
         match input_str.trim().parse::<T>() {
             Ok(value) => return value,
-            Err(_) => println!("Invalid input. Try again."),
+            Err(_) => eprintln!("Failed to parse input. Try again."),
         }
     }
 }
 
 pub fn get_text(message: &str) -> String {
     loop {
-        println!("{message}:");
-        io::stdout().flush().unwrap();
+        let _ = stdout().flush().unwrap();
+        eprintln!("{message}:");
+        let _ = stderr().flush().unwrap();
 
         let mut input_str = String::new();
-        if io::stdin().read_to_string(&mut input_str).is_err() {
-            println!("Failed to read input. Try again.");
+        if let Err(e) = stdin().read_to_string(&mut input_str) {
+            eprintln!("Failed to read input: {e}. Try again.");
             continue;
         }
 
@@ -75,15 +78,12 @@ pub fn get_from_file() -> String {
 
         match std::fs::read_to_string(path) {
             Ok(file_content) => return file_content,
-            Err(_) => println!("Failed to open file. Try again"),
+            Err(e) => eprintln!("Failed to open file: {e}. Try again"),
         }
     }
 }
 
-pub fn get_row_vector<F: Field>(message: &str, expected_cols: usize) -> DRVec<F>
-where
-    F::Element: std::fmt::Display,
-{
+pub fn get_row_vector<F: Field>(message: &str, expected_cols: usize) -> DRVec<F> {
     loop {
         let v: DRVec<_> = get_from_line(message);
 
@@ -91,7 +91,7 @@ where
             break v;
         }
 
-        println!("Vector must have exactly {expected_cols} elements. Try again.");
+        eprintln!("Vector must have exactly {expected_cols} elements. Try again.");
     }
 }
 
@@ -134,9 +134,9 @@ where
                 .collect::<Vec<_>>()
                 .join("\n");
 
-            println!();
-            println!("{message}:");
-            println!("{data_str}");
+            eprintln!();
+            eprintln!("{message}:");
+            eprintln!("{data_str}");
 
             let x: F::Element = get_from_line("Enter x value");
             data.push(x);

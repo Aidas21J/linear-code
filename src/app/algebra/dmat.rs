@@ -58,13 +58,13 @@ impl<F: Field> DMat<F> {
     }
 
     pub fn from_data(rows: usize, data: Vec<F::Element>) -> Option<Self> {
-        if data.len() % rows != 0 {
+        if !data.len().is_multiple_of(rows) {
             return None;
         }
 
         Some(Self {
             rows,
-            cols: data.len() / rows,
+            cols: data.len().checked_div_euclid(rows)?,
             data,
         })
     }
@@ -104,10 +104,12 @@ impl<F: Field> DMat<F> {
 // ---------------------------------------------------------------------------------------------------------------------
 
 impl<F: Field> DMat<F> {
-    pub fn join(a: &Self, b: &Self) -> Option<Self> {
-        if a.rows() != b.rows() {
-            return None;
-        }
+    pub fn join(a: &Self, b: &Self) -> Self {
+        debug_assert_eq!(
+            a.rows(),
+            b.rows(),
+            "cannot join matrices with different number of rows"
+        );
 
         let rows = a.rows;
         let cols = a.cols + b.cols;
@@ -117,31 +119,18 @@ impl<F: Field> DMat<F> {
             .flat_map(|(a_row, b_row)| [a_row, b_row].concat())
             .collect();
 
-        Some(Self { rows, cols, data })
+        Self { rows, cols, data }
     }
 
-    pub fn split(&self, cols: usize) -> Option<(Self, Self)> {
-        if self.cols < cols {
-            return None;
-        }
+    pub fn take(&self, cols: usize) -> Self {
+        let rows = self.rows();
+        let data = self
+            .rows_iter()
+            .flat_map(|row| row.iter().take(cols))
+            .cloned()
+            .collect::<Vec<_>>();
 
-        let rows = self.rows;
-        let (lcols, rcols) = (cols, self.cols - cols);
-        let (ldata, rdata): (Vec<&[_]>, Vec<&[_]>) =
-            self.rows_iter().map(|row| row.split_at(lcols)).unzip();
-
-        Some((
-            Self {
-                rows,
-                cols: lcols,
-                data: ldata.into_iter().flatten().cloned().collect(),
-            },
-            Self {
-                rows,
-                cols: rcols,
-                data: rdata.into_iter().flatten().cloned().collect(),
-            },
-        ))
+        Self { rows, cols, data }
     }
 }
 

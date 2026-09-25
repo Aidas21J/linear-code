@@ -68,19 +68,14 @@ impl<F: Field> DRVec<F> {
 }
 
 pub struct DRVecIterator<F: FiniteField> {
-    field_generator: F::Element,
-    field_generator_inverse: F::Element,
     next_state: Option<DRVec<F>>,
 }
 
 impl<F: FiniteField> DRVecIterator<F> {
-    pub fn new(cols: usize, field_generator: F::Element) -> Option<Self> {
-        let field_generator_inverse = F::recip(field_generator.clone())?;
-        Some(Self {
-            field_generator,
-            field_generator_inverse,
+    pub fn new(cols: usize) -> Self {
+        Self {
             next_state: DRVec::zeros(cols).into(),
-        })
+        }
     }
 }
 
@@ -98,12 +93,12 @@ impl<F: FiniteField> Iterator for DRVecIterator<F> {
         }
 
         let go_to_next_val = |val: &mut F::Element| {
-            if *val == F::ZERO {
-                *val = F::ONE
-            } else if *val == self.field_generator_inverse {
-                *val = F::ZERO
+            *val = if *val == F::ZERO {
+                F::ONE
+            } else if *val == F::GENERATOR_INVERSE {
+                F::ZERO
             } else {
-                *val = F::mul(val, &self.field_generator)
+                F::mul(val, &F::GENERATOR)
             }
         };
 
@@ -315,13 +310,11 @@ impl<F: Field> std::str::FromStr for DRVec<F> {
     type Err = <F::Element as std::str::FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let row = s
-            .chars()
+        Ok(s.chars()
             .map(|c| c.to_string())
             .map(|str| F::Element::from_str(str.as_str()))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(row.into())
+            .collect::<Result<Vec<_>, _>>()?
+            .into())
     }
 }
 

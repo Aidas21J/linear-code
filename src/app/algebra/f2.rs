@@ -1,6 +1,8 @@
 use rand::RngExt as _;
 
-use super::{field::Field, finite_underlying_set::FiniteUnderlyingSet, randomizable::Randomizable};
+use crate::app::algebra::finite_field::FiniteField;
+
+use super::{field::Field, randomizable::Randomizable};
 
 pub enum F2 {}
 
@@ -34,6 +36,19 @@ impl Field for F2 {
     }
 }
 
+impl FiniteField for F2 {
+    const GENERATOR: Self::Element = F2Element::ONE;
+    const GENERATOR_INVERSE: Self::Element = F2Element::ONE;
+
+    fn non_zero_elements() -> impl ExactSizeIterator<Item = Self::Element> {
+        [F2Element::ONE].into_iter()
+    }
+
+    fn elements() -> impl ExactSizeIterator<Item = Self::Element> {
+        [F2Element::ZERO, F2Element::ONE].into_iter()
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
 pub struct F2Element {
     value: bool,
@@ -58,7 +73,9 @@ impl std::str::FromStr for F2Element {
         match s {
             "0" => Ok(Self::ZERO),
             "1" => Ok(Self::ONE),
-            _ => Err(format!("cannot parse F2 element: {s}")),
+            _ => Err(format!(
+                "cannot parse F2 element: {s}. Only valid values are 0 and 1"
+            )),
         }
     }
 }
@@ -69,12 +86,6 @@ impl F2Element {
 
     pub fn flip(&mut self) {
         self.value = !self.value
-    }
-}
-
-impl FiniteUnderlyingSet for F2Element {
-    fn iter() -> impl ExactSizeIterator<Item = Self> {
-        [Self::ZERO, Self::ONE].into_iter()
     }
 }
 

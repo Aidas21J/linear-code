@@ -50,7 +50,6 @@ where
             .map(|v| self.code().encode(v))
             .map(|v| self.channel().send(v, rng))
             .map(|v| self.code().decode(v))
-            .map(|v| v.unwrap_or(DRVec::zeros(self.code().k())))
             .collect();
 
         let error_count: usize = input_vecs
@@ -66,27 +65,27 @@ where
         let mut rng = rand::rng();
 
         loop {
-            println!();
-            println!("{}", "#".repeat(100));
-            println!("{}", "#".repeat(100));
-            println!("{}", "#".repeat(100));
-            println!();
+            eprintln!();
+            eprintln!("{}", "#".repeat(100));
+            eprintln!("{}", "#".repeat(100));
+            eprintln!("{}", "#".repeat(100));
+            eprintln!();
 
             let initial = ui::get_row_vector("Enter vector", self.code().k());
 
-            println!();
-            println!("{}", "#".repeat(100));
-            println!();
-            println!("Encoding...");
+            eprintln!();
+            eprintln!("{}", "#".repeat(100));
+            eprintln!();
+            eprintln!("Encoding...");
 
             let encoded = self.code().encode(&initial);
 
             println!("Encoded: {encoded}");
 
-            println!();
-            println!("{}", "#".repeat(100));
-            println!();
-            println!("Sending through the channel...");
+            eprintln!();
+            eprintln!("{}", "#".repeat(100));
+            eprintln!();
+            eprintln!("Sending through the channel...");
 
             let received = {
                 let mut received = self.channel().send(encoded.clone(), &mut rng);
@@ -106,8 +105,8 @@ where
                     encoded_to_received_err_str =
                         ui::vector_error_string(&encoded, &received, ' ', '^');
 
-                    println!();
-                    println!("{}", "#".repeat(100));
+                    eprintln!();
+                    eprintln!("{}", "#".repeat(100));
                     println!();
                     println!(" Encoded: {encoded}");
                     println!("Received: {received}");
@@ -117,18 +116,18 @@ where
                 received
             };
 
-            println!();
-            println!("{}", "#".repeat(100));
-            println!();
-            println!("Decoding...");
+            eprintln!();
+            eprintln!("{}", "#".repeat(100));
+            eprintln!();
+            eprintln!("Decoding...");
 
-            let decoded = self.code().decode(received.clone()).unwrap();
+            let decoded = self.code().decode(received.clone());
 
             println!("Decoded: {decoded}");
 
-            println!();
-            println!("{}", "#".repeat(100));
-            println!();
+            eprintln!();
+            eprintln!("{}", "#".repeat(100));
+            eprintln!();
 
             let initial_to_final_err_str = ui::vector_error_string(&initial, &decoded, ' ', '^');
 
@@ -154,14 +153,14 @@ where
         let mut rng = rand::rng();
 
         loop {
-            println!();
-            println!("{}", "#".repeat(100));
-            println!("{}", "#".repeat(100));
-            println!("{}", "#".repeat(100));
-            println!();
+            eprintln!();
+            eprintln!("{}", "#".repeat(100));
+            eprintln!("{}", "#".repeat(100));
+            eprintln!("{}", "#".repeat(100));
+            eprintln!();
 
             let text: String = {
-                if ui::get_yes_no("Read from file?", Some(false)) {
+                if ui::get_yes_no("Read from file?", None) {
                     ui::get_from_file()
                 } else {
                     ui::get_text("Enter text")
@@ -179,6 +178,10 @@ where
                 )
             };
 
+            println!();
+            println!("[WITHOUT CODING]:");
+            println!("{text_without_coding}");
+
             let (text_with_coding, errors_with_coding) = {
                 let (output_raw, error_count) =
                     self.send_with_coding(&input_vecs, pad_size, &mut rng);
@@ -189,15 +192,13 @@ where
             };
 
             println!();
-            println!("[WITHOUT CODE]:");
-            println!("{text_without_coding}");
-            println!();
-            println!("[WITH CODE]:");
+            println!("[WITH CODING]:");
             println!("{text_with_coding}");
+
             println!();
             println!("[STATS]:");
-            println!("Errors without code: {errors_without_coding}");
-            println!("   Errors with code: {errors_with_coding}");
+            println!("Errors without coding: {errors_without_coding}");
+            println!("   Errors with coding: {errors_with_coding}");
             println!();
 
             if !ui::get_yes_no("Try another text?", Some(true)) {
@@ -206,26 +207,54 @@ where
         }
     }
 
-    fn image_loop(&self) -> Result<(), Box<dyn std::error::Error>> {
+    fn image_loop(&self) {
         let mut rng = rand::rng();
 
         loop {
-            let original_window = create_window("Original", Default::default())?;
-            let without_coding_window = create_window("Without coding", Default::default())?;
-            let with_coding_window = create_window("With coding", Default::default())?;
+            let original_window = match create_window("Original", Default::default()) {
+                Ok(w) => w,
+                Err(e) => {
+                    eprintln!("Failed to create window: {e}.");
+                    return;
+                }
+            };
+            let without_coding_window = match create_window("Without coding", Default::default()) {
+                Ok(w) => w,
+                Err(e) => {
+                    eprintln!("Failed to create window: {e}.");
+                    return;
+                }
+            };
+            let with_coding_window = match create_window("With coding", Default::default()) {
+                Ok(w) => w,
+                Err(e) => {
+                    eprintln!("Failed to create window: {e}.");
+                    return;
+                }
+            };
 
-            println!();
-            println!("{}", "#".repeat(100));
-            println!("{}", "#".repeat(100));
-            println!("{}", "#".repeat(100));
-            println!();
+            eprintln!();
+            eprintln!("{}", "#".repeat(100));
+            eprintln!("{}", "#".repeat(100));
+            eprintln!("{}", "#".repeat(100));
+            eprintln!();
 
             let filename: String = ui::get_from_line("Enter filepath");
-            let img = match ImageReader::open(&filename)?.decode() {
-                Ok(decoded) => decoded,
-                Err(e) => {
-                    println!("Failed to decode image {}: {}", filename, e);
-                    continue;
+            let img = {
+                let file = match ImageReader::open(&filename) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        eprintln!("Failed to open image {}: {}", filename, e);
+                        continue;
+                    }
+                };
+
+                match file.decode() {
+                    Ok(i) => i,
+                    Err(e) => {
+                        eprintln!("Failed to decode image {}: {}", filename, e);
+                        continue;
+                    }
                 }
             };
 
@@ -233,7 +262,12 @@ where
             let (width, height) = img.dimensions();
             let image_info = ImageInfo::rgb8(width, height);
 
-            original_window.set_image(&filename, ImageView::new(image_info, &original_rgb))?;
+            if let Err(e) =
+                original_window.set_image(&filename, ImageView::new(image_info, &original_rgb))
+            {
+                eprintln!("Failed to show original image: {e}");
+                continue;
+            }
 
             let (input_vecs, pad_size) =
                 self.bytes_to_vecs(original_rgb.as_flat_samples().samples.to_vec());
@@ -245,13 +279,17 @@ where
                 if let Some(output_image) = RgbImage::from_raw(width, height, output_raw) {
                     (output_image, error_count)
                 } else {
-                    println!("Failed to create (not coded) output image");
+                    eprintln!("Failed to create (not coded) output image");
                     continue;
                 }
             };
 
-            without_coding_window
-                .set_image(&filename, ImageView::new(image_info, &image_without_coding))?;
+            if let Err(e) = without_coding_window
+                .set_image(&filename, ImageView::new(image_info, &image_without_coding))
+            {
+                eprintln!("Failed to show coded image: {e}");
+                continue;
+            }
 
             let (image_with_coding, errors_with_coding) = {
                 let (output_raw, error_count) =
@@ -260,13 +298,17 @@ where
                 if let Some(output_image) = RgbImage::from_raw(width, height, output_raw) {
                     (output_image, error_count)
                 } else {
-                    println!("Failed to create (coded) output image");
+                    eprintln!("Failed to create (coded) output image");
                     continue;
                 }
             };
 
-            with_coding_window
-                .set_image(&filename, ImageView::new(image_info, &image_with_coding))?;
+            if let Err(e) = with_coding_window
+                .set_image(&filename, ImageView::new(image_info, &image_with_coding))
+            {
+                eprintln!("Failed to show coded image: {e}");
+                continue;
+            }
 
             println!();
             println!("[STATS]:");
@@ -274,8 +316,8 @@ where
             println!("   Errors with coding: {errors_with_coding}");
             println!();
 
-            if !ui::get_yes_no("Try another text?", Some(true)) {
-                return Ok(());
+            if !ui::get_yes_no("Try another image?", Some(true)) {
+                return;
             }
         }
     }

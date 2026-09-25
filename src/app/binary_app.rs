@@ -1,5 +1,6 @@
 use crate::app::{
     algebra::{
+        dmat::DMat,
         drvec::DRVec,
         f2::{F2, F2Element},
         field::Field as _,
@@ -18,13 +19,13 @@ pub struct BinaryApp {
 }
 
 impl BinaryApp {
-    pub fn new() -> Option<Self> {
+    pub fn new() -> Self {
         let p_e: f64 = loop {
             let p_e_input = ui::get_from_line("p_e");
             if 0.0 <= p_e_input && p_e_input <= 1.0 {
                 break p_e_input;
             }
-            println!("Invalid input. p_e has to be between 0 and 1 (inclusive). Try again.");
+            eprintln!("Invalid input. p_e has to be between 0 and 1 (inclusive). Try again.");
         };
 
         let n: usize = ui::get_from_line("n");
@@ -32,31 +33,36 @@ impl BinaryApp {
         let k: usize = loop {
             let k_input = ui::get_from_line("k");
             if k_input > n {
-                println!("Invalid input. k cannot be greater than n. Try again.");
+                eprintln!("Invalid input. k cannot be greater than n. Try again.");
             } else if k_input <= 0 {
-                println!("Invalid input. k must be positive. Try again.");
+                eprintln!("Invalid input. k must be positive. Try again.");
             } else {
                 break k_input;
             }
         };
+        eprintln!();
 
-        println!();
         let input_generator_parity =
             ui::get_yes_no("Do you want to enter custom generator parity?", Some(false));
 
-        let code = if input_generator_parity {
-            let generator_parity = ui::get_matrix(
-                "Entering G parity part (identity part will be added automatically)",
-                k,
-                n - k,
-            );
-            BinaryLinearCode::from_parity(generator_parity)?
-        } else {
-            let mut rng = rand::rng();
-            BinaryLinearCode::new_random(n, k, &mut rng)?
-        };
+        let code = {
+            let rows = k;
+            let cols = n.saturating_sub(k);
 
-        println!();
+            let generator_parity = if input_generator_parity {
+                ui::get_matrix(
+                    "Entering G parity part (identity part will be added automatically)",
+                    rows,
+                    cols,
+                )
+            } else {
+                DMat::generate_uniform(rows, cols, &mut rand::rng())
+            };
+
+            BinaryLinearCode::from_parity(generator_parity)
+        };
+        eprintln!();
+
         println!("G:");
         println!("{}", code.generator());
         println!();
@@ -66,7 +72,7 @@ impl BinaryApp {
 
         let channel = BinaryChannel::new(p_e);
 
-        Some(Self { code, channel })
+        Self { code, channel }
     }
 }
 
@@ -87,7 +93,7 @@ impl App<BinaryLinearCode, BinaryChannel> for BinaryApp {
             let b = BITS_PER_BYTE % chunk_size;
             let remainder = (a * b) % chunk_size;
 
-            (chunk_size - remainder) % chunk_size
+            (chunk_size.saturating_sub(remainder)) % chunk_size
         };
 
         let mut vecs = Vec::with_capacity(bytes.len() + pad_size);
