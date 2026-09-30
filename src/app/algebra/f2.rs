@@ -1,6 +1,6 @@
 use rand::RngExt as _;
 
-use crate::app::algebra::finite_field::FiniteField;
+use crate::app::algebra::{finite_field::FiniteField, finite_underlying_set::FiniteUnderlyingSet};
 
 use super::{field::Field, randomizable::Randomizable};
 
@@ -43,10 +43,6 @@ impl FiniteField for F2 {
     fn non_zero_elements() -> impl ExactSizeIterator<Item = Self::Element> {
         [F2Element::ONE].into_iter()
     }
-
-    fn elements() -> impl ExactSizeIterator<Item = Self::Element> {
-        [F2Element::ZERO, F2Element::ONE].into_iter()
-    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
@@ -84,10 +80,14 @@ impl F2Element {
     pub const ZERO: Self = Self { value: false };
     pub const ONE: Self = Self { value: true };
 
-    pub fn flip(&mut self) {
-        self.value = !self.value
+    pub const fn conditionally_fliped(self, flip: bool) -> Self {
+        Self {
+            value: self.value ^ flip,
+        }
     }
 }
+
+impl FiniteUnderlyingSet for F2Element {}
 
 impl Randomizable for F2Element {
     fn generate_uniform(rng: &mut impl rand::prelude::Rng) -> Self {

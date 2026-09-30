@@ -2,68 +2,29 @@ use image::{GenericImageView, ImageReader, RgbImage};
 use show_image::{ImageInfo, ImageView, create_window};
 
 use crate::app::{
-    algebra::{drvec::DRVec, field::Field, randomizable::Randomizable},
-    core::{channel, linear_code},
+    algebra::{drvec::DRVec, field::Field},
+    core::{
+        linear_code::LinearCode,
+        memoryless_channel::MemorylessChannel,
+        vec_buffer::{VecBuffer, error_count},
+        vec_codec::VecCodec,
+    },
     ui,
 };
 
-pub trait App<LinearCode, Channel>
+pub trait App
 where
-    LinearCode: linear_code::LinearCode,
-    Channel: channel::Channel<LinearCode::Field>,
-    <LinearCode::Field as Field>::Element: Randomizable + std::fmt::Display,
+    <<Self::Code as LinearCode>::Field as Field>::Element: std::fmt::Display,
 {
-    fn code(&self) -> &LinearCode;
-    fn channel(&self) -> &Channel;
+    type Code: LinearCode;
+    type Channel: MemorylessChannel<<<Self::Code as LinearCode>::Field as Field>::Element>;
+    type VecCodec: VecCodec<<Self::Code as LinearCode>::Field>;
 
-    fn bytes_to_vecs(&self, bytes: Vec<u8>) -> (Vec<DRVec<LinearCode::Field>>, usize);
-    fn vecs_to_bytes(&self, vecs: Vec<DRVec<LinearCode::Field>>, pad_size: usize) -> Vec<u8>;
-
-    fn send_without_coding(
-        &self,
-        input_vecs: &Vec<DRVec<LinearCode::Field>>,
-        pad_size: usize,
-        rng: &mut impl rand::Rng,
-    ) -> (Vec<u8>, usize) {
-        let output_vecs: Vec<_> = input_vecs
-            .iter()
-            .map(|v| self.channel().send(v.clone(), rng))
-            .collect();
-
-        let error_count: usize = input_vecs
-            .iter()
-            .zip(output_vecs.iter())
-            .map(|(a, b)| DRVec::hamming_distance(a, b))
-            .sum();
-
-        (self.vecs_to_bytes(output_vecs, pad_size), error_count)
-    }
-
-    fn send_with_coding(
-        &self,
-        input_vecs: &Vec<DRVec<LinearCode::Field>>,
-        pad_size: usize,
-        rng: &mut impl rand::Rng,
-    ) -> (Vec<u8>, usize) {
-        let output_vecs: Vec<_> = input_vecs
-            .iter()
-            .map(|v| self.code().encode(v))
-            .map(|v| self.channel().send(v, rng))
-            .map(|v| self.code().decode(v))
-            .collect();
-
-        let error_count: usize = input_vecs
-            .iter()
-            .zip(output_vecs.iter())
-            .map(|(a, b)| DRVec::hamming_distance(a, b))
-            .sum();
-
-        (self.vecs_to_bytes(output_vecs, pad_size), error_count)
-    }
+    fn code(&self) -> &Self::Code;
+    fn channel(&self) -> &Self::Channel;
+    fn vec_codec(&self) -> &Self::VecCodec;
 
     fn single_vector_loop(&self) {
-        let mut rng = rand::rng();
-
         loop {
             eprintln!();
             eprintln!("{}", "#".repeat(100));
@@ -88,7 +49,7 @@ where
             eprintln!("Sending through the channel...");
 
             let received = {
-                let mut received = self.channel().send(encoded.clone(), &mut rng);
+                let mut received = self.channel().send_vec(encoded.clone(), &mut rand::rng());
                 let mut encoded_to_received_err_str =
                     ui::vector_error_string(&encoded, &received, ' ', '^');
 
@@ -150,8 +111,6 @@ where
     }
 
     fn text_loop(&self) {
-        let mut rng = rand::rng();
-
         loop {
             eprintln!();
             eprintln!("{}", "#".repeat(100));
@@ -167,14 +126,17 @@ where
                 }
             };
 
-            let (input_vecs, pad_size) = self.bytes_to_vecs(text.as_bytes().to_vec());
+            let (input_vecs, pad_size) = self.vec_codec().parse_vecs(text.into());
 
-            let (text_without_coding, errors_without_coding) = {
-                let (output_raw, error_count) =
-                    self.send_without_coding(&input_vecs, pad_size, &mut rng);
+            let (errors_without_coding, text_without_coding) = {
+                let output_vecs: Vec<_> = input_vecs
+                    .clone()
+                    .send_through_channel(self.channel())
+                    .collect();
                 (
-                    String::from_utf8_lossy(&output_raw).to_string(),
-                    error_count,
+                    error_count(input_vecs.iter(), output_vecs.iter()),
+                    String::from_utf8_lossy(&self.vec_codec().parse_bytes(output_vecs, pad_size))
+                        .to_string(),
                 )
             };
 
@@ -182,12 +144,15 @@ where
             println!("[WITHOUT CODING]:");
             println!("{text_without_coding}");
 
-            let (text_with_coding, errors_with_coding) = {
-                let (output_raw, error_count) =
-                    self.send_with_coding(&input_vecs, pad_size, &mut rng);
+            let (errors_with_coding, text_with_coding) = {
+                let output_vecs: Vec<_> = input_vecs
+                    .clone()
+                    .send_through_channel_with_coding(self.channel(), self.code())
+                    .collect();
                 (
-                    String::from_utf8_lossy(&output_raw).to_string(),
-                    error_count,
+                    error_count(input_vecs.iter(), output_vecs.iter()),
+                    String::from_utf8_lossy(&self.vec_codec().parse_bytes(output_vecs, pad_size))
+                        .to_string(),
                 )
             };
 
@@ -208,8 +173,6 @@ where
     }
 
     fn image_loop(&self) {
-        let mut rng = rand::rng();
-
         loop {
             let original_window = match create_window("Original", Default::default()) {
                 Ok(w) => w,
@@ -269,15 +232,20 @@ where
                 continue;
             }
 
-            let (input_vecs, pad_size) =
-                self.bytes_to_vecs(original_rgb.as_flat_samples().samples.to_vec());
+            let (input_vecs, pad_size) = self
+                .vec_codec()
+                .parse_vecs(original_rgb.as_flat_samples().samples.into());
 
-            let (image_without_coding, errors_without_coding) = {
-                let (output_raw, error_count) =
-                    self.send_without_coding(&input_vecs, pad_size, &mut rng);
+            let (errors_without_coding, image_without_coding) = {
+                let output_vecs: Vec<_> = input_vecs
+                    .clone()
+                    .send_through_channel(self.channel())
+                    .collect();
+                let error_count = error_count(input_vecs.iter(), output_vecs.iter());
+                let output_raw = self.vec_codec().parse_bytes(output_vecs, pad_size);
 
                 if let Some(output_image) = RgbImage::from_raw(width, height, output_raw) {
-                    (output_image, error_count)
+                    (error_count, output_image)
                 } else {
                     eprintln!("Failed to create (not coded) output image");
                     continue;
@@ -291,12 +259,16 @@ where
                 continue;
             }
 
-            let (image_with_coding, errors_with_coding) = {
-                let (output_raw, error_count) =
-                    self.send_with_coding(&input_vecs, pad_size, &mut rng);
+            let (errors_with_coding, image_with_coding) = {
+                let output_vecs: Vec<_> = input_vecs
+                    .clone()
+                    .send_through_channel_with_coding(self.channel(), self.code())
+                    .collect();
+                let error_count = error_count(input_vecs.iter(), output_vecs.iter());
+                let output_raw = self.vec_codec().parse_bytes(output_vecs, pad_size);
 
                 if let Some(output_image) = RgbImage::from_raw(width, height, output_raw) {
-                    (output_image, error_count)
+                    (error_count, output_image)
                 } else {
                     eprintln!("Failed to create (coded) output image");
                     continue;
