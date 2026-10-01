@@ -1095,6 +1095,7 @@ version = "0.1.0"
 dependencies = [
  "image",
  "rand 0.10.3",
+ "rayon",
  "show-image",
 ]
 

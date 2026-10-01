@@ -122,11 +122,13 @@ impl<F: Field> DMat<F> {
         Self { rows, cols, data }
     }
 
-    pub fn take(&self, cols: usize) -> Self {
+    pub fn split_off(&self, cols: usize) -> Self {
+        let skip_cols = self.cols().saturating_sub(cols);
         let rows = self.rows();
         let data = self
             .rows_iter()
-            .flat_map(|row| row.iter().take(cols))
+            .map(|row| &row[skip_cols..])
+            .flatten()
             .cloned()
             .collect::<Vec<_>>();
 

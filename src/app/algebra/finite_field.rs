@@ -3,6 +3,8 @@ use crate::app::algebra::finite_underlying_set::FiniteUnderlyingSet;
 use super::field::Field;
 
 pub trait FiniteField: Field<Element: FiniteUnderlyingSet> {
+    const ORDER: usize;
+
     const GENERATOR: Self::Element;
     const GENERATOR_INVERSE: Self::Element;
 

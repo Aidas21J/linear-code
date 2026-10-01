@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::app::{
     algebra::{dmat::DMat, drvec::DRVec, f2::F2},
     core::linear_code::LinearCode,
@@ -8,7 +6,7 @@ use crate::app::{
 pub struct BinaryLinearCode {
     generator: DMat<F2>,
     parity_check: DMat<F2>,
-    syndrome_min_weight: HashMap<DRVec<F2>, usize>,
+    syndrome_min_weight: Vec<usize>,
 }
 
 impl LinearCode for BinaryLinearCode {
@@ -22,17 +20,8 @@ impl LinearCode for BinaryLinearCode {
         &self.parity_check
     }
 
-    #[cfg(debug_assertions)]
     fn get_syndrome_min_weight(&self, syndrome: &DRVec<Self::Field>) -> usize {
-        let weight_option = self.syndrome_min_weight.get(syndrome);
-        debug_assert!(weight_option.is_some(), "could not find {syndrome} weight");
-
-        *weight_option.unwrap_or(&0)
-    }
-
-    #[cfg(not(debug_assertions))]
-    fn get_syndrome_min_weight(&self, syndrome: &DRVec<Self::Field>) -> usize {
-        *self.syndrome_min_weight.get(syndrome).unwrap_or(&0)
+        self.syndrome_min_weight[syndrome.index()]
     }
 }
 

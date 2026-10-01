@@ -37,6 +37,8 @@ impl Field for F2 {
 }
 
 impl FiniteField for F2 {
+    const ORDER: usize = 2;
+
     const GENERATOR: Self::Element = F2Element::ONE;
     const GENERATOR_INVERSE: Self::Element = F2Element::ONE;
 
@@ -59,6 +61,12 @@ impl From<bool> for F2Element {
 impl From<F2Element> for u8 {
     fn from(element: F2Element) -> Self {
         element.value as u8
+    }
+}
+
+impl From<F2Element> for usize {
+    fn from(element: F2Element) -> Self {
+        element.value as usize
     }
 }
 

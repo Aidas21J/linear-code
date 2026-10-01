@@ -43,9 +43,9 @@ impl<F: Field> DRVec<F> {
         }
     }
 
-    pub fn e(zeros_before: usize, zeros_after: usize) -> Self {
+    pub fn e(zeros_before: usize, zeros_after: usize, value: F::Element) -> Self {
         let mut row = vec![F::ZERO; zeros_before + 1 + zeros_after];
-        row[zeros_before] = F::ONE;
+        row[zeros_before] = value;
 
         row.into()
     }
@@ -133,8 +133,9 @@ impl<F: FiniteField> Iterator for DRVecIterator<F> {
 // ---------------------------------------------------------------------------------------------------------------------
 
 impl<F: Field> DRVec<F> {
-    pub fn split_off(mut self, cols: usize) -> Self {
-        self.data.split_off(cols).into()
+    pub fn take(mut self, cols: usize) -> Self {
+        self.data.resize_with(cols, || F::ZERO);
+        self
     }
 }
 
@@ -158,6 +159,18 @@ impl<F: Field> DRVec<F> {
     }
 }
 
+impl<F: FiniteField> DRVec<F> {
+    pub fn index(&self) -> usize
+    where
+        usize: From<F::Element>,
+    {
+        self.data
+            .iter()
+            .cloned()
+            .fold(0usize, |acc, element| F::ORDER * acc + usize::from(element))
+    }
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 // Row vector binary operations ----------------------------------------------------------------------------------------
@@ -177,14 +190,6 @@ impl<F: Field> DRVec<F> {
             .zip(b.data.iter())
             .filter(|(a_i, b_i)| a_i != b_i)
             .count()
-    }
-
-    pub fn into_scalar_mul(s: &F::Element, v: Self) -> Self {
-        v.data
-            .into_iter()
-            .map(|element| F::mul(s, &element))
-            .collect::<Vec<_>>()
-            .into()
     }
 }
 
