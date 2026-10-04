@@ -1,5 +1,5 @@
 use crate::app::{
-    algebra::{dmat::DMat, f2::F2},
+    algebra::{dmat::DMat, drvec::DRVec, dynamic_matrix::DynamicMatrix as _, f2::F2},
     app::App,
     core::{
         binary_linear_code::BinaryLinearCode, linear_code::LinearCode,
@@ -11,7 +11,7 @@ use crate::app::{
 pub struct BinaryApp {
     code: BinaryLinearCode,
     channel: SymmetricChannel,
-    vec_codec: UniversalVecCodec<F2>,
+    vec_codec: UniversalVecCodec<DRVec<F2>>,
 }
 
 impl BinaryApp {
@@ -80,7 +80,7 @@ impl BinaryApp {
 impl App for BinaryApp {
     type Code = BinaryLinearCode;
     type Channel = SymmetricChannel;
-    type VecCodec = UniversalVecCodec<F2>;
+    type VecCodec = UniversalVecCodec<DRVec<F2>>;
 
     fn code(&self) -> &BinaryLinearCode {
         &self.code

@@ -4,29 +4,22 @@ use show_image::{ImageInfo, ImageView, create_window};
 use rayon::prelude::*;
 
 use crate::app::{
-    algebra::{drvec::DRVec, field::Field},
+    algebra::{
+        dynamic_vector::{DynamicVector as _, error_count},
+        field::Field,
+    },
     core::{linear_code::LinearCode, memoryless_channel::MemorylessChannel, vec_codec::VecCodec},
     ui,
 };
 
-pub fn error_count<'a, F, IS, IR>(sent: IS, received: IR) -> usize
-where
-    F: Field + 'a,
-    IS: Iterator<Item = &'a DRVec<F>>,
-    IR: Iterator<Item = &'a DRVec<F>>,
-{
-    sent.zip(received)
-        .map(|(a, b)| DRVec::hamming_distance(a, b))
-        .sum()
-}
-
 pub trait App
 where
+    <Self::Code as LinearCode>::RowVector: Clone + std::str::FromStr + std::fmt::Display,
     <<Self::Code as LinearCode>::Field as Field>::Element: std::fmt::Display,
 {
     type Code: LinearCode;
     type Channel: MemorylessChannel<<<Self::Code as LinearCode>::Field as Field>::Element>;
-    type VecCodec: VecCodec<<Self::Code as LinearCode>::Field>;
+    type VecCodec: VecCodec<<Self::Code as LinearCode>::RowVector>;
 
     fn code(&self) -> &Self::Code;
     fn channel(&self) -> &Self::Channel;
@@ -104,8 +97,8 @@ where
             println!("  Final vector: {decoded}");
             println!("        Errors: {initial_to_final_err_str}");
 
-            let transition_errors = DRVec::hamming_distance(&encoded, &received);
-            let decoded_vector_errors = DRVec::hamming_distance(&initial, &decoded);
+            let transition_errors = encoded.hamming_distance_to(&received);
+            let decoded_vector_errors = initial.hamming_distance_to(&decoded);
 
             println!();
             println!("       Errors from channel: {transition_errors}.");
@@ -121,7 +114,7 @@ where
     fn text_loop(&self)
     where
         Self: Sync,
-        DRVec<<Self::Code as LinearCode>::Field>: Sync + Send,
+        <Self::Code as LinearCode>::RowVector: Sync + Send,
     {
         loop {
             eprintln!();
@@ -204,7 +197,7 @@ where
     fn image_loop(&self)
     where
         Self: Sync,
-        DRVec<<Self::Code as LinearCode>::Field>: Sync + Send,
+        <Self::Code as LinearCode>::RowVector: Sync + Send,
     {
         loop {
             let original_window = match create_window("Original", Default::default()) {

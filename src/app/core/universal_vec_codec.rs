@@ -2,29 +2,29 @@ use std::marker::PhantomData;
 
 use crate::app::{
     algebra::{
-        drvec::DRVec,
+        dynamic_vector::DynamicVector,
         f2::{F2, F2Element},
         field::Field,
     },
     core::vec_codec::VecCodec,
 };
 
-pub struct UniversalVecCodec<F: Field> {
+pub struct UniversalVecCodec<V: DynamicVector> {
     vec_dim: usize,
-    _field: PhantomData<F>,
+    _vector: PhantomData<V>,
 }
 
-impl<F: Field> UniversalVecCodec<F> {
+impl<V: DynamicVector> UniversalVecCodec<V> {
     pub const fn new(vec_dim: usize) -> Self {
         Self {
             vec_dim,
-            _field: PhantomData,
+            _vector: PhantomData,
         }
     }
 }
 
-impl VecCodec<F2> for UniversalVecCodec<F2> {
-    fn parse_vecs(&self, bytes: Vec<u8>) -> (Vec<DRVec<F2>>, usize) {
+impl<V: DynamicVector<Field = F2>> VecCodec<V> for UniversalVecCodec<V> {
+    fn parse_vecs(&self, bytes: Vec<u8>) -> (Vec<V>, usize) {
         const BITS_PER_BYTE: usize = 8;
         let chunk_size = self.vec_dim;
         let pad_size = {
@@ -61,20 +61,20 @@ impl VecCodec<F2> for UniversalVecCodec<F2> {
                 break;
             }
 
-            vecs.push(chunk.collect::<Vec<_>>().into());
+            vecs.push(V::from_iter(chunk));
         }
 
         (vecs, pad_size)
     }
 
-    fn parse_bytes(&self, vecs: Vec<DRVec<F2>>, pad_size: usize) -> Vec<u8> {
+    fn parse_bytes(&self, vecs: Vec<V>, pad_size: usize) -> Vec<u8> {
         const BITS_PER_BYTE: usize = 8;
         let bits_to_take = (vecs.len().saturating_mul(self.vec_dim)).saturating_sub(pad_size);
         let mut bytes = Vec::with_capacity(bits_to_take / BITS_PER_BYTE);
 
         let mut bit_iter = vecs
             .into_iter()
-            .flat_map(|v| v.into_data())
+            .flat_map(|v| v.into_iter())
             .take(bits_to_take);
 
         loop {

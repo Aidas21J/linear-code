@@ -3,7 +3,9 @@ use std::{
     str::FromStr,
 };
 
-use crate::app::algebra::{dmat::DMat, drvec::DRVec, field::Field};
+use crate::app::algebra::{
+    dynamic_matrix::DynamicMatrix, dynamic_vector::DynamicVector, field::Field,
+};
 
 pub fn get_yes_no(message: &str, default: Option<bool>) -> bool {
     loop {
@@ -83,11 +85,15 @@ pub fn get_from_file() -> String {
     }
 }
 
-pub fn get_row_vector<F: Field>(message: &str, expected_cols: usize) -> DRVec<F> {
+pub fn get_row_vector<F, V>(message: &str, expected_cols: usize) -> V
+where
+    F: Field,
+    V: DynamicVector<Field = F> + FromStr,
+{
     loop {
-        let v: DRVec<_> = get_from_line(message);
+        let v: V = get_from_line(message);
 
-        if v.cols() == expected_cols {
+        if v.dim() == expected_cols {
             break v;
         }
 
@@ -95,13 +101,12 @@ pub fn get_row_vector<F: Field>(message: &str, expected_cols: usize) -> DRVec<F>
     }
 }
 
-pub fn vector_error_string<F: Field>(
-    a: &DRVec<F>,
-    b: &DRVec<F>,
-    no_error_char: char,
-    error_char: char,
-) -> String {
-    debug_assert_eq!(a.cols(), b.cols(), "expected same size vectors");
+pub fn vector_error_string<F, V>(a: &V, b: &V, no_error_char: char, error_char: char) -> String
+where
+    F: Field,
+    V: DynamicVector<Field = F>,
+{
+    debug_assert_eq!(a.dim(), b.dim(), "expected same size vectors");
 
     a.iter()
         .zip(b.iter())
@@ -112,8 +117,10 @@ pub fn vector_error_string<F: Field>(
         .collect()
 }
 
-pub fn get_matrix<F: Field>(message: &str, rows: usize, cols: usize) -> DMat<F>
+pub fn get_matrix<F, M>(message: &str, rows: usize, cols: usize) -> M
 where
+    F: Field,
+    M: DynamicMatrix<Field = F>,
     F::Element: std::fmt::Display,
 {
     let mut data: Vec<F::Element> = Vec::new();
@@ -143,5 +150,5 @@ where
         }
     }
 
-    DMat::from_data(rows, data).unwrap()
+    M::from_data(rows, data).unwrap()
 }

@@ -1,6 +1,6 @@
-use std::fmt::{Debug, Display};
-
-use super::{field::Field, randomizable::Randomizable};
+use crate::app::algebra::{
+    dcvec::DCVec, drvec::DRVec, dynamic_matrix::DynamicMatrix, field::Field,
+};
 
 pub struct DMat<F: Field> {
     rows: usize,
@@ -8,264 +8,77 @@ pub struct DMat<F: Field> {
     data: Vec<F::Element>,
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Matrix getters ------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
+impl<F: Field> DynamicMatrix for DMat<F> {
+    type Field = F;
 
-impl<F: Field> DMat<F> {
-    pub fn rows(&self) -> usize {
+    type RowVector = DRVec<F>;
+
+    type ColVector = DCVec<F>;
+
+    fn flat_iter(&self) -> impl ExactSizeIterator<Item = &<Self::Field as Field>::Element> {
+        self.data.iter()
+    }
+
+    fn flat_iter_mut(
+        &mut self,
+    ) -> impl ExactSizeIterator<Item = &mut <Self::Field as Field>::Element> {
+        self.data.iter_mut()
+    }
+
+    fn into_flat_iter(self) -> impl ExactSizeIterator<Item = <Self::Field as Field>::Element> {
+        self.data.into_iter()
+    }
+
+    fn rows_iter(&self) -> std::slice::ChunksExact<'_, <Self::Field as Field>::Element> {
+        self.data.chunks_exact(self.cols())
+    }
+
+    fn rows_iter_mut(&mut self) -> std::slice::ChunksExactMut<'_, <Self::Field as Field>::Element> {
+        self.data.chunks_exact_mut(self.cols)
+    }
+
+    fn rows(&self) -> usize {
         self.rows
     }
 
-    pub fn cols(&self) -> usize {
+    fn cols(&self) -> usize {
         self.cols
     }
 
-    pub fn dims(&self) -> (usize, usize) {
-        (self.rows, self.cols)
-    }
-}
+    fn from_data<I>(rows: usize, data: I) -> Option<Self>
+    where
+        I: IntoIterator<Item = <Self::Field as Field>::Element>,
+    {
+        let data: Vec<_> = data.into_iter().collect();
 
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Matrix creation -----------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-
-impl<F: Field> DMat<F> {
-    pub fn zeros(rows: usize, cols: usize) -> Self {
-        Self {
-            rows,
-            cols,
-            data: vec![F::ZERO; rows * cols],
-        }
-    }
-
-    pub fn identity(dim: usize) -> Self {
-        let mut data = vec![F::ZERO; dim * dim];
-
-        data.iter_mut()
-            .step_by(dim + 1)
-            .for_each(|element| *element = F::ONE);
-
-        Self {
-            rows: dim,
-            cols: dim,
-            data,
-        }
-    }
-
-    pub fn from_data(rows: usize, data: Vec<F::Element>) -> Option<Self> {
         if !data.len().is_multiple_of(rows) {
             return None;
         }
+        let cols = data.len().checked_div_euclid(rows)?;
 
-        Some(Self {
-            rows,
-            cols: data.len().checked_div_euclid(rows)?,
-            data,
-        })
+        Some(Self { rows, cols, data })
     }
 
-    pub fn generate_uniform(rows: usize, cols: usize, rng: &mut impl rand::prelude::Rng) -> Self
+    fn from_data_unchecked<I>(rows: usize, data: I) -> Self
     where
-        F::Element: Randomizable,
+        I: IntoIterator<Item = <Self::Field as Field>::Element>,
     {
-        let data: Vec<F::Element> = (0..(rows * cols))
-            .map(|_| F::Element::generate_uniform(rng))
-            .collect();
-
-        Self { rows, cols, data }
-    }
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Matrix iteration ----------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-
-impl<F: Field> DMat<F> {
-    pub fn rows_iter(&self) -> std::slice::ChunksExact<'_, F::Element> {
-        self.data.chunks_exact(self.cols)
-    }
-
-    pub fn rows_iter_mut(&mut self) -> std::slice::ChunksExactMut<'_, F::Element> {
-        self.data.chunks_exact_mut(self.cols)
-    }
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Matrix manipulation -------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-
-impl<F: Field> DMat<F> {
-    pub fn join(a: &Self, b: &Self) -> Self {
-        debug_assert_eq!(
-            a.rows(),
-            b.rows(),
-            "cannot join matrices with different number of rows"
-        );
-
-        let rows = a.rows;
-        let cols = a.cols + b.cols;
-        let data = a
-            .rows_iter()
-            .zip(b.rows_iter())
-            .flat_map(|(a_row, b_row)| [a_row, b_row].concat())
-            .collect();
+        let data: Vec<_> = data.into_iter().collect();
+        let cols = data.len() / rows;
 
         Self { rows, cols, data }
     }
 
-    pub fn split_off(&self, cols: usize) -> Self {
-        let skip_cols = self.cols().saturating_sub(cols);
-        let rows = self.rows();
-        let data = self
-            .rows_iter()
-            .map(|row| &row[skip_cols..])
-            .flatten()
-            .cloned()
-            .collect::<Vec<_>>();
-
-        Self { rows, cols, data }
-    }
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Matrix unary operations ---------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-
-impl<F: Field> DMat<F> {
-    pub fn transpose(&self) -> Self {
-        let data: Vec<F::Element> = (0..self.cols)
-            .flat_map(|c| (0..self.rows).map(move |r| self.data[r * self.cols + c].clone()))
+    fn generate<GF>(rows: usize, cols: usize, mut generate: GF) -> Self
+    where
+        GF: FnMut(usize, usize) -> <Self::Field as Field>::Element,
+    {
+        let data = (0..cols)
+            .flat_map(|x| (0..rows).map(move |y| (x, y)))
+            .map(|(x, y)| generate(x, y))
             .collect();
 
-        Self {
-            rows: self.cols(),
-            cols: self.rows(),
-            data,
-        }
-    }
-}
-
-impl<F: Field> std::ops::Neg for &DMat<F> {
-    type Output = DMat<F>;
-
-    fn neg(self) -> Self::Output {
-        DMat {
-            rows: self.rows(),
-            cols: self.cols(),
-            data: self
-                .data
-                .iter()
-                .map(|element| F::neg(element.clone()))
-                .collect(),
-        }
-    }
-}
-
-impl<F: Field> std::ops::Neg for DMat<F> {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        DMat {
-            rows: self.rows(),
-            cols: self.cols(),
-            data: self
-                .data
-                .into_iter()
-                .map(|element| F::neg(element))
-                .collect(),
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Matrix binary operations --------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-
-impl<F: Field> DMat<F> {
-    pub fn scalar_mul(s: &F::Element, m: &Self) -> Self {
-        Self {
-            rows: m.rows(),
-            cols: m.cols(),
-            data: m.data.iter().map(|element| F::mul(s, element)).collect(),
-        }
-    }
-
-    pub fn into_scalar_mul(s: &F::Element, m: Self) -> Self {
-        Self {
-            rows: m.rows(),
-            cols: m.cols(),
-            data: m
-                .data
-                .into_iter()
-                .map(|element| F::mul(s, &element))
-                .collect(),
-        }
-    }
-}
-
-impl<F: Field> std::ops::Mul for &DMat<F> {
-    type Output = DMat<F>;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        debug_assert_eq!(
-            self.cols(),
-            rhs.rows(),
-            "matrix dimentions do not match for multiplication"
-        );
-
-        let mut res = DMat::<F>::zeros(self.rows(), rhs.cols());
-
-        let a_rows = self.rows_iter();
-        let res_rows = res.rows_iter_mut();
-
-        for (a_row, res_row) in a_rows.zip(res_rows) {
-            let b_rows = rhs.rows_iter();
-
-            for (a_val, b_row) in a_row.iter().zip(b_rows) {
-                for (res_val, b_val) in res_row.iter_mut().zip(b_row.iter()) {
-                    *res_val = F::add(res_val, &F::mul(a_val, b_val));
-                }
-            }
-        }
-
-        res
-    }
-}
-
-impl<F: Field> std::ops::Mul<DMat<F>> for &DMat<F> {
-    type Output = DMat<F>;
-
-    fn mul(self, rhs: DMat<F>) -> Self::Output {
-        self * &rhs
-    }
-}
-
-impl<F: Field> std::ops::Mul<&DMat<F>> for DMat<F> {
-    type Output = DMat<F>;
-
-    fn mul(self, rhs: &DMat<F>) -> Self::Output {
-        &self * rhs
-    }
-}
-
-impl<F: Field> std::ops::Mul<DMat<F>> for DMat<F> {
-    type Output = DMat<F>;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        &self * &rhs
+        Self { rows, cols, data }
     }
 }
 
@@ -275,9 +88,9 @@ impl<F: Field> std::ops::Mul<DMat<F>> for DMat<F> {
 // ---------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 
-impl<F: Field> Debug for DMat<F>
+impl<F: Field> std::fmt::Debug for DMat<F>
 where
-    F::Element: Debug,
+    F::Element: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DMat")
@@ -288,9 +101,9 @@ where
     }
 }
 
-impl<F: Field> Display for DMat<F>
+impl<F: Field> std::fmt::Display for DMat<F>
 where
-    F::Element: Display,
+    F::Element: std::fmt::Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let self_str: String = self
@@ -305,34 +118,6 @@ where
             .collect::<Vec<_>>()
             .join("\n");
         write!(f, "{self_str}")
-    }
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Matrix equality -----------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-
-impl<F: Field> PartialEq for DMat<F> {
-    fn eq(&self, other: &Self) -> bool {
-        self.rows == other.rows && self.cols == other.cols && self.data == other.data
-    }
-}
-
-impl<F: Field> Eq for DMat<F> {}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Matrix hash ---------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-
-impl<F: Field> std::hash::Hash for DMat<F> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.rows.hash(state);
-        self.cols.hash(state);
-        self.data.hash(state);
     }
 }
 

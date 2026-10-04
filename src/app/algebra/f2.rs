@@ -15,7 +15,19 @@ impl Field for F2 {
         }
     }
 
+    fn into_add(a: Self::Element, b: &Self::Element) -> Self::Element {
+        Self::Element {
+            value: a.value ^ b.value,
+        }
+    }
+
     fn mul(a: &Self::Element, b: &Self::Element) -> Self::Element {
+        Self::Element {
+            value: a.value & b.value,
+        }
+    }
+
+    fn into_mul(a: Self::Element, b: &Self::Element) -> Self::Element {
         Self::Element {
             value: a.value & b.value,
         }
