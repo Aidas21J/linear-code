@@ -1,5 +1,8 @@
 pub(crate) mod algebra;
 pub(crate) mod app;
-pub(crate) mod binary_app;
+pub(crate) mod base_app;
 pub(crate) mod core;
+pub(crate) mod image_app;
+pub(crate) mod single_vector_app;
+pub(crate) mod text_app;
 pub(crate) mod ui;

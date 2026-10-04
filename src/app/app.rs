@@ -1,337 +1,103 @@
-use image::{GenericImageView, ImageReader, RgbImage};
-use show_image::{ImageInfo, ImageView, create_window};
-
-use rayon::prelude::*;
-
 use crate::app::{
-    algebra::{
-        dynamic_vector::{DynamicVector as _, error_count},
-        field::Field,
+    algebra::{dmat::DMat, drvec::DRVec, dynamic_matrix::DynamicMatrix as _, f2::F2},
+    base_app::BaseApp,
+    core::{
+        binary_linear_code::BinaryLinearCode, linear_code::LinearCode,
+        symmetric_channel::SymmetricChannel, universal_vec_codec::UniversalVecCodec,
     },
-    core::{linear_code::LinearCode, memoryless_channel::MemorylessChannel, vec_codec::VecCodec},
+    image_app::ImageApp,
+    single_vector_app::SingleVectorApp,
+    text_app::TextApp,
     ui,
 };
 
-pub trait App
-where
-    <Self::Code as LinearCode>::RowVector: Clone + std::str::FromStr + std::fmt::Display,
-    <<Self::Code as LinearCode>::Field as Field>::Element: std::fmt::Display,
-{
-    type Code: LinearCode;
-    type Channel: MemorylessChannel<<<Self::Code as LinearCode>::Field as Field>::Element>;
-    type VecCodec: VecCodec<<Self::Code as LinearCode>::RowVector>;
+pub struct App {
+    code: BinaryLinearCode,
+    channel: SymmetricChannel,
+    vec_codec: UniversalVecCodec<DRVec<F2>>,
+}
 
-    fn code(&self) -> &Self::Code;
-    fn channel(&self) -> &Self::Channel;
-    fn vec_codec(&self) -> &Self::VecCodec;
-
-    fn single_vector_loop(&self) {
-        loop {
-            eprintln!();
-            eprintln!("{}", "#".repeat(100));
-            eprintln!("{}", "#".repeat(100));
-            eprintln!("{}", "#".repeat(100));
-            eprintln!();
-
-            let initial = ui::get_row_vector("Enter vector", self.code().k());
-
-            eprintln!();
-            eprintln!("{}", "#".repeat(100));
-            eprintln!();
-            eprintln!("Encoding...");
-
-            let encoded = self.code().encode(&initial);
-
-            println!("Encoded: {encoded}");
-
-            eprintln!();
-            eprintln!("{}", "#".repeat(100));
-            eprintln!();
-            eprintln!("Sending through the channel...");
-
-            let received = {
-                let mut received = self.channel().send_vec(encoded.clone(), &mut rand::rng());
-                let mut encoded_to_received_err_str =
-                    ui::vector_error_string(&encoded, &received, ' ', '^');
-
-                println!();
-                println!(" Encoded: {encoded}");
-                println!("Received: {received}");
-                println!("  Errors: {encoded_to_received_err_str}");
-
-                println!();
-                let edit_received =
-                    ui::get_yes_no("Do you want to edit received vector?", Some(false));
-                if edit_received {
-                    received = ui::get_row_vector("Enter received", self.code().n());
-                    encoded_to_received_err_str =
-                        ui::vector_error_string(&encoded, &received, ' ', '^');
-
-                    eprintln!();
-                    eprintln!("{}", "#".repeat(100));
-                    println!();
-                    println!(" Encoded: {encoded}");
-                    println!("Received: {received}");
-                    println!("  Errors: {encoded_to_received_err_str}");
-                }
-
-                received
-            };
-
-            eprintln!();
-            eprintln!("{}", "#".repeat(100));
-            eprintln!();
-            eprintln!("Decoding...");
-
-            let decoded = self.code().decode(received.clone());
-
-            println!("Decoded: {decoded}");
-
-            eprintln!();
-            eprintln!("{}", "#".repeat(100));
-            eprintln!();
-
-            let initial_to_final_err_str = ui::vector_error_string(&initial, &decoded, ' ', '^');
-
-            println!("Initial vector: {initial}");
-            println!("  Final vector: {decoded}");
-            println!("        Errors: {initial_to_final_err_str}");
-
-            let transition_errors = encoded.hamming_distance_to(&received);
-            let decoded_vector_errors = initial.hamming_distance_to(&decoded);
-
-            println!();
-            println!("       Errors from channel: {transition_errors}.");
-            println!("Errors in the final vector: {decoded_vector_errors}.");
-            println!();
-
-            if !ui::get_yes_no("Try another vector?", Some(true)) {
-                return;
+impl App {
+    pub fn new() -> Self {
+        let p_e: f64 = loop {
+            let p_e_input = ui::get_from_line("p_e");
+            if 0.0 <= p_e_input && p_e_input <= 1.0 {
+                break p_e_input;
             }
-        }
-    }
+            eprintln!("Invalid input. p_e has to be between 0 and 1 (inclusive). Try again.");
+        };
 
-    fn text_loop(&self)
-    where
-        Self: Sync,
-        <Self::Code as LinearCode>::RowVector: Sync + Send,
-    {
-        loop {
-            eprintln!();
-            eprintln!("{}", "#".repeat(100));
-            eprintln!("{}", "#".repeat(100));
-            eprintln!("{}", "#".repeat(100));
-            eprintln!();
+        let n: usize = ui::get_from_line("n");
 
-            let text: String = {
-                if ui::get_yes_no("Read from file?", None) {
-                    ui::get_from_file()
-                } else {
-                    ui::get_text("Enter text")
-                }
-            };
+        let k: usize = loop {
+            let k_input = ui::get_from_line("k");
+            if k_input > n {
+                eprintln!("Invalid input. k cannot be greater than n. Try again.");
+            } else if k_input <= 0 {
+                eprintln!("Invalid input. k must be positive. Try again.");
+            } else {
+                break k_input;
+            }
+        };
+        eprintln!();
 
-            let (input_vecs, pad_size) = self.vec_codec().parse_vecs(text.into());
+        let input_generator_parity =
+            ui::get_yes_no("Do you want to enter custom generator parity?", Some(false));
 
-            let (errors_without_coding, duration_without_coding, text_without_coding) = {
-                let start = std::time::Instant::now();
-                let output_vecs: Vec<_> = input_vecs
-                    .par_iter()
-                    .cloned()
-                    .map_init(|| rand::rng(), |rng, vec| self.channel().send_vec(vec, rng))
-                    .collect();
-                let duration = start.elapsed();
+        let code = {
+            let rows = k;
+            let cols = n.saturating_sub(k);
 
-                (
-                    error_count(input_vecs.iter(), output_vecs.iter()),
-                    duration,
-                    String::from_utf8_lossy(&self.vec_codec().parse_bytes(output_vecs, pad_size))
-                        .to_string(),
+            let generator_parity = if input_generator_parity {
+                ui::get_matrix(
+                    "Entering G parity part (identity part will be added automatically)",
+                    rows,
+                    cols,
                 )
+            } else {
+                DMat::generate_uniform(rows, cols, &mut rand::rng())
             };
 
-            println!();
-            println!("[WITHOUT CODING]:");
-            println!("{text_without_coding}");
+            BinaryLinearCode::from_parity(generator_parity)
+        };
+        eprintln!();
 
-            let (errors_with_coding, duration_with_coding, text_with_coding) = {
-                let start = std::time::Instant::now();
-                let output_vecs: Vec<_> = input_vecs
-                    .par_iter()
-                    .map(|vec| self.code().encode(vec))
-                    .map_init(|| rand::rng(), |rng, vec| self.channel().send_vec(vec, rng))
-                    .map(|vec| self.code().decode(vec))
-                    .collect();
-                let duration = start.elapsed();
+        println!("G:");
+        println!("{}", code.generator());
+        println!();
+        println!("H:");
+        println!("{}", code.parity_check());
+        println!();
 
-                (
-                    error_count(input_vecs.iter(), output_vecs.iter()),
-                    duration,
-                    String::from_utf8_lossy(&self.vec_codec().parse_bytes(output_vecs, pad_size))
-                        .to_string(),
-                )
-            };
+        let channel = SymmetricChannel::new(p_e);
+        let vec_codec = UniversalVecCodec::new(code.k());
 
-            println!();
-            println!("[WITH CODING]:");
-            println!("{text_with_coding}");
-
-            let duration_without_coding_us = duration_without_coding.as_micros();
-            let duration_with_coding_us = duration_with_coding.as_micros();
-
-            println!();
-            println!("[STATS]:");
-            println!("Errors without coding: {errors_without_coding}");
-            println!("   Errors with coding: {errors_with_coding}");
-            println!();
-            println!("Duration without coding: {duration_without_coding_us} us");
-            println!("   Duration with coding: {duration_with_coding_us} us");
-            println!();
-
-            if !ui::get_yes_no("Try another text?", Some(true)) {
-                return;
-            }
-        }
-    }
-
-    fn image_loop(&self)
-    where
-        Self: Sync,
-        <Self::Code as LinearCode>::RowVector: Sync + Send,
-    {
-        loop {
-            let original_window = match create_window("Original", Default::default()) {
-                Ok(w) => w,
-                Err(e) => {
-                    eprintln!("Failed to create window: {e}.");
-                    return;
-                }
-            };
-            let without_coding_window = match create_window("Without coding", Default::default()) {
-                Ok(w) => w,
-                Err(e) => {
-                    eprintln!("Failed to create window: {e}.");
-                    return;
-                }
-            };
-            let with_coding_window = match create_window("With coding", Default::default()) {
-                Ok(w) => w,
-                Err(e) => {
-                    eprintln!("Failed to create window: {e}.");
-                    return;
-                }
-            };
-
-            eprintln!();
-            eprintln!("{}", "#".repeat(100));
-            eprintln!("{}", "#".repeat(100));
-            eprintln!("{}", "#".repeat(100));
-            eprintln!();
-
-            let filename: String = ui::get_from_line("Enter filepath");
-            let img = {
-                let file = match ImageReader::open(&filename) {
-                    Ok(f) => f,
-                    Err(e) => {
-                        eprintln!("Failed to open image {}: {}", filename, e);
-                        continue;
-                    }
-                };
-
-                match file.decode() {
-                    Ok(i) => i,
-                    Err(e) => {
-                        eprintln!("Failed to decode image {}: {}", filename, e);
-                        continue;
-                    }
-                }
-            };
-
-            let original_rgb = img.to_rgb8();
-            let (width, height) = img.dimensions();
-            let image_info = ImageInfo::rgb8(width, height);
-
-            if let Err(e) =
-                original_window.set_image(&filename, ImageView::new(image_info, &original_rgb))
-            {
-                eprintln!("Failed to show original image: {e}");
-                continue;
-            }
-
-            let (input_vecs, pad_size) = self
-                .vec_codec()
-                .parse_vecs(original_rgb.as_flat_samples().samples.into());
-
-            let (errors_without_coding, duration_without_coding, image_without_coding) = {
-                let start = std::time::Instant::now();
-                let output_vecs: Vec<_> = input_vecs
-                    .par_iter()
-                    .cloned()
-                    .map_init(|| rand::rng(), |rng, vec| self.channel().send_vec(vec, rng))
-                    .collect();
-                let duration = start.elapsed();
-
-                let error_count = error_count(input_vecs.iter(), output_vecs.iter());
-                let output_raw = self.vec_codec().parse_bytes(output_vecs, pad_size);
-
-                if let Some(output_image) = RgbImage::from_raw(width, height, output_raw) {
-                    (error_count, duration, output_image)
-                } else {
-                    eprintln!("Failed to create (not coded) output image");
-                    continue;
-                }
-            };
-
-            if let Err(e) = without_coding_window
-                .set_image(&filename, ImageView::new(image_info, &image_without_coding))
-            {
-                eprintln!("Failed to show coded image: {e}");
-                continue;
-            }
-
-            let (errors_with_coding, duration_with_coding, image_with_coding) = {
-                let start = std::time::Instant::now();
-                let output_vecs: Vec<_> = input_vecs
-                    .par_iter()
-                    .map(|vec| self.code().encode(vec))
-                    .map_init(|| rand::rng(), |rng, vec| self.channel().send_vec(vec, rng))
-                    .map(|vec| self.code().decode(vec))
-                    .collect();
-                let duration = start.elapsed();
-
-                let error_count = error_count(input_vecs.iter(), output_vecs.iter());
-                let output_raw = self.vec_codec().parse_bytes(output_vecs, pad_size);
-
-                if let Some(output_image) = RgbImage::from_raw(width, height, output_raw) {
-                    (error_count, duration, output_image)
-                } else {
-                    eprintln!("Failed to create (coded) output image");
-                    continue;
-                }
-            };
-
-            if let Err(e) = with_coding_window
-                .set_image(&filename, ImageView::new(image_info, &image_with_coding))
-            {
-                eprintln!("Failed to show coded image: {e}");
-                continue;
-            }
-
-            let duration_without_coding_us = duration_without_coding.as_micros();
-            let duration_with_coding_us = duration_with_coding.as_micros();
-
-            println!();
-            println!("[STATS]:");
-            println!("Errors without coding: {errors_without_coding}");
-            println!("   Errors with coding: {errors_with_coding}");
-            println!();
-            println!("Duration without coding: {duration_without_coding_us} us");
-            println!("   Duration with coding: {duration_with_coding_us} us");
-            println!();
-
-            if !ui::get_yes_no("Try another image?", Some(true)) {
-                return;
-            }
+        Self {
+            code,
+            channel,
+            vec_codec,
         }
     }
 }
+
+impl BaseApp for App {
+    type Code = BinaryLinearCode;
+    type Channel = SymmetricChannel;
+    type VecCodec = UniversalVecCodec<DRVec<F2>>;
+
+    fn code(&self) -> &BinaryLinearCode {
+        &self.code
+    }
+
+    fn channel(&self) -> &SymmetricChannel {
+        &self.channel
+    }
+
+    fn vec_codec(&self) -> &Self::VecCodec {
+        &self.vec_codec
+    }
+}
+
+impl SingleVectorApp for App {}
+impl TextApp for App {}
+impl ImageApp for App {}
