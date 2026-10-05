@@ -1,6 +1,7 @@
 use crate::app::{
     algebra::{dmat::DMat, drvec::DRVec, dynamic_matrix::DynamicMatrix as _, f2::F2},
     base_app::BaseApp,
+    buffer_app::BufferApp,
     core::{
         binary_linear_code::BinaryLinearCode, linear_code::LinearCode,
         symmetric_channel::SymmetricChannel, universal_vec_codec::UniversalVecCodec,
@@ -83,7 +84,6 @@ impl App {
 impl BaseApp for App {
     type Code = BinaryLinearCode;
     type Channel = SymmetricChannel;
-    type VecCodec = UniversalVecCodec<DRVec<F2>>;
 
     fn code(&self) -> &BinaryLinearCode {
         &self.code
@@ -92,6 +92,10 @@ impl BaseApp for App {
     fn channel(&self) -> &SymmetricChannel {
         &self.channel
     }
+}
+
+impl BufferApp for App {
+    type VecCodec = UniversalVecCodec<DRVec<F2>>;
 
     fn vec_codec(&self) -> &Self::VecCodec {
         &self.vec_codec

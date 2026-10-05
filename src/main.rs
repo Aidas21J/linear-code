@@ -5,7 +5,6 @@ use crate::app::{
 
 pub(crate) mod app;
 
-#[show_image::main]
 fn main() {
     let args: Vec<_> = std::env::args().collect();
     let app = App::new();

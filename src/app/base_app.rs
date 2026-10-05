@@ -1,14 +1,29 @@
 use crate::app::{
     algebra::field::Field,
-    core::{linear_code::LinearCode, memoryless_channel::MemorylessChannel, vec_codec::VecCodec},
+    core::{linear_code::LinearCode, memoryless_channel::MemorylessChannel},
 };
 
 pub trait BaseApp {
     type Code: LinearCode;
     type Channel: MemorylessChannel<<<Self::Code as LinearCode>::Field as Field>::Element>;
-    type VecCodec: VecCodec<<Self::Code as LinearCode>::RowVector>;
 
     fn code(&self) -> &Self::Code;
     fn channel(&self) -> &Self::Channel;
-    fn vec_codec(&self) -> &Self::VecCodec;
 }
+
+macro_rules! log_activity {
+    ($name:expr, $activity:expr) => {{
+        eprintln!("{}", $name);
+
+        let start = std::time::Instant::now();
+        let result = $activity;
+        let duration = start.elapsed();
+
+        eprintln!("Done.");
+        eprintln!("Duration: {} us", duration.as_micros());
+        eprintln!();
+
+        result
+    }};
+}
+pub(crate) use log_activity;

@@ -20,63 +20,50 @@ where
 
             let initial = ui::get_row_vector("Enter vector", self.code().k());
 
-            eprintln!();
-            eprintln!("{}", "#".repeat(100));
-            eprintln!();
+            print_separator();
             eprintln!("Encoding...");
 
             let encoded = self.code().encode(&initial);
 
             println!("Encoded: {encoded}");
 
-            eprintln!();
-            eprintln!("{}", "#".repeat(100));
-            eprintln!();
+            print_separator();
             eprintln!("Sending through the channel...");
 
             let received = {
                 let mut received = self.channel().send_vec(encoded.clone(), &mut rand::rng());
-                let mut encoded_to_received_err_str =
-                    ui::vector_error_string(&encoded, &received, ' ', '^');
+                let mut err_str = ui::vector_error_string(&encoded, &received, " ", "^");
 
                 println!();
                 println!(" Encoded: {encoded}");
                 println!("Received: {received}");
-                println!("  Errors: {encoded_to_received_err_str}");
-
+                println!("  Errors: {err_str}");
                 println!();
-                let edit_received =
-                    ui::get_yes_no("Do you want to edit received vector?", Some(false));
+
+                let edit_received = ui::get_yes_no("Edit received vector?", Some(false));
                 if edit_received {
                     received = ui::get_row_vector("Enter received", self.code().n());
-                    encoded_to_received_err_str =
-                        ui::vector_error_string(&encoded, &received, ' ', '^');
+                    err_str = ui::vector_error_string(&encoded, &received, " ", "^");
 
-                    eprintln!();
-                    eprintln!("{}", "#".repeat(100));
-                    println!();
+                    print_separator();
                     println!(" Encoded: {encoded}");
                     println!("Received: {received}");
-                    println!("  Errors: {encoded_to_received_err_str}");
+                    println!("  Errors: {err_str}");
                 }
 
                 received
             };
 
-            eprintln!();
-            eprintln!("{}", "#".repeat(100));
-            eprintln!();
+            print_separator();
             eprintln!("Decoding...");
 
             let decoded = self.code().decode(received.clone());
 
             println!("Decoded: {decoded}");
 
-            eprintln!();
-            eprintln!("{}", "#".repeat(100));
-            eprintln!();
+            print_separator();
 
-            let initial_to_final_err_str = ui::vector_error_string(&initial, &decoded, ' ', '^');
+            let initial_to_final_err_str = ui::vector_error_string(&initial, &decoded, " ", "^");
 
             println!("Initial vector: {initial}");
             println!("  Final vector: {decoded}");
@@ -86,13 +73,20 @@ where
             let decoded_vector_errors = initial.hamming_distance_to(&decoded);
 
             println!();
-            println!("       Errors from channel: {transition_errors}.");
-            println!("Errors in the final vector: {decoded_vector_errors}.");
-            println!();
+            println!("       Errors from channel: {transition_errors}");
+            println!("Errors in the final vector: {decoded_vector_errors}");
+
+            print_separator();
 
             if !ui::get_yes_no("Try another vector?", Some(true)) {
                 return;
             }
         }
     }
+}
+
+fn print_separator() {
+    eprintln!();
+    eprintln!("{}", "-".repeat(100));
+    eprintln!();
 }

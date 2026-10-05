@@ -1,5 +1,5 @@
 use std::{
-    io::{Read as _, Write as _, stderr, stdin, stdout},
+    io::{Write as _, stderr, stdin, stdout},
     str::FromStr,
 };
 
@@ -58,33 +58,6 @@ pub fn get_from_line<T: FromStr>(message: &str) -> T {
     }
 }
 
-pub fn get_text(message: &str) -> String {
-    loop {
-        let _ = stdout().flush().unwrap();
-        eprintln!("{message}:");
-        let _ = stderr().flush().unwrap();
-
-        let mut input_str = String::new();
-        if let Err(e) = stdin().read_to_string(&mut input_str) {
-            eprintln!("Failed to read input: {e}. Try again.");
-            continue;
-        }
-
-        return input_str;
-    }
-}
-
-pub fn get_from_file() -> String {
-    loop {
-        let path: String = get_from_line("Enter filepath");
-
-        match std::fs::read_to_string(path) {
-            Ok(file_content) => return file_content,
-            Err(e) => eprintln!("Failed to open file: {e}. Try again"),
-        }
-    }
-}
-
 pub fn get_row_vector<F, V>(message: &str, expected_cols: usize) -> V
 where
     F: Field,
@@ -101,7 +74,7 @@ where
     }
 }
 
-pub fn vector_error_string<F, V>(a: &V, b: &V, no_error_char: char, error_char: char) -> String
+pub fn vector_error_string<F, V>(a: &V, b: &V, match_marker: &str, error_marker: &str) -> String
 where
     F: Field,
     V: DynamicVector<Field = F>,
@@ -111,8 +84,8 @@ where
     a.iter()
         .zip(b.iter())
         .map(|(a_i, b_i)| match a_i != b_i {
-            false => no_error_char,
-            true => error_char,
+            false => match_marker,
+            true => error_marker,
         })
         .collect()
 }

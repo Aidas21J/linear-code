@@ -1,6 +1,7 @@
 pub(crate) mod algebra;
 pub(crate) mod app;
 pub(crate) mod base_app;
+pub(crate) mod buffer_app;
 pub(crate) mod core;
 pub(crate) mod image_app;
 pub(crate) mod single_vector_app;
