@@ -1,10 +1,18 @@
-pub(crate) mod algebra;
-pub(crate) mod analysis_app;
-pub(crate) mod app;
-pub(crate) mod base_app;
-pub(crate) mod buffer_app;
-pub(crate) mod core;
-pub(crate) mod image_app;
-pub(crate) mod single_vector_app;
-pub(crate) mod text_app;
-pub(crate) mod ui;
+mod algebra;
+mod analysis_app;
+mod app;
+mod base_app;
+mod buffer_app;
+mod core;
+mod image_app;
+mod single_vector_app;
+mod text_app;
+mod ui;
+
+pub use analysis_app::AnalysisApp;
+pub use app::App;
+pub use base_app::{BaseApp, log_activity};
+pub use buffer_app::BufferApp;
+pub use image_app::ImageApp;
+pub use single_vector_app::SingleVectorApp;
+pub use text_app::TextApp;

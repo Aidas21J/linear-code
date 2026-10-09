@@ -1,4 +1,4 @@
-use crate::app::algebra::{dynamic_vector::DynamicVector, field::Field};
+use crate::app::algebra::{DynamicVector, Field};
 
 pub trait MemorylessChannel<T> {
     fn send<R: rand::Rng>(&self, value: T, rng: &mut R) -> T;

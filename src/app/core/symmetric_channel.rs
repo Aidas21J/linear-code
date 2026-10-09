@@ -1,4 +1,6 @@
-use crate::app::{algebra::f2::F2Element, core::memoryless_channel::MemorylessChannel};
+use crate::app::algebra::F2Element;
+
+use super::MemorylessChannel;
 
 pub struct SymmetricChannel {
     p_e: f64,

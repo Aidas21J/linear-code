@@ -1,7 +1,4 @@
-use crate::app::algebra::{
-    dynamic_vector::DynamicVector, field::Field, randomizable::Randomizable,
-    transposable_vector::TransposableTo,
-};
+use super::{DynamicVector, Field, Randomizable, TransposableTo};
 
 type Scalar<M> = <<M as DynamicMatrix>::Field as Field>::Element;
 

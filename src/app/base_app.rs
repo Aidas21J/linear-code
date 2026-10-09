@@ -1,6 +1,6 @@
-use crate::app::{
-    algebra::field::Field,
-    core::{linear_code::LinearCode, memoryless_channel::MemorylessChannel},
+use super::{
+    algebra::Field,
+    core::{LinearCode, MemorylessChannel},
 };
 
 pub trait BaseApp {
@@ -13,6 +13,7 @@ pub trait BaseApp {
     fn set_channel(&mut self, channel: Self::Channel);
 }
 
+#[macro_export]
 macro_rules! log_activity {
     ($name:expr, $activity:expr) => {{
         eprintln!("{}", $name);
@@ -28,4 +29,4 @@ macro_rules! log_activity {
         result
     }};
 }
-pub(crate) use log_activity;
+pub use log_activity;

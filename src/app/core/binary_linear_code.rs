@@ -1,7 +1,6 @@
-use crate::app::{
-    algebra::{dcvec::DCVec, dmat::DMat, drvec::DRVec, dynamic_vector::DynamicVector as _, f2::F2},
-    core::linear_code::LinearCode,
-};
+use crate::app::algebra::{DCVec, DMat, DRVec, DynamicVector as _, F2};
+
+use super::LinearCode;
 
 pub struct BinaryLinearCode {
     generator: DMat<F2>,

@@ -1,7 +1,7 @@
 use crate::app::{
-    algebra::{dynamic_vector::DynamicVector as _, field::Field},
-    base_app::BaseApp,
-    core::{linear_code::LinearCode, memoryless_channel::MemorylessChannel as _},
+    BaseApp,
+    algebra::{DynamicVector as _, Field},
+    core::{LinearCode, MemorylessChannel as _},
     ui,
 };
 

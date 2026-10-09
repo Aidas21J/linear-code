@@ -1,6 +1,4 @@
-use crate::app::algebra::{
-    dcvec::DCVec, dynamic_vector::DynamicVector, field::Field, transposable_vector::TransposableTo,
-};
+use super::{DCVec, DynamicVector, Field, TransposableTo};
 
 pub struct DRVec<F: Field> {
     data: Vec<F::Element>,

@@ -1,3 +1,3 @@
-use crate::app::algebra::underlying_set::UnderlyingSet;
+use super::UnderlyingSet;
 
 pub trait FiniteUnderlyingSet: UnderlyingSet {}

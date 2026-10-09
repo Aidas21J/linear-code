@@ -1,4 +1,4 @@
-use crate::app::algebra::dynamic_vector::DynamicVector;
+use crate::app::algebra::DynamicVector;
 
 pub trait VecCodec<V: DynamicVector>: Sized {
     fn parse_vecs(&self, bytes: Vec<u8>) -> (Vec<V>, usize);

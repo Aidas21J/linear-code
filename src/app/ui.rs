@@ -1,8 +1,6 @@
 use std::io::{Write as _, stderr, stdin, stdout};
 
-use crate::app::algebra::{
-    dynamic_matrix::DynamicMatrix, dynamic_vector::DynamicVector, field::Field,
-};
+use super::algebra::{DynamicMatrix, DynamicVector, Field};
 
 pub fn get_yes_no(message: &str, default: Option<bool>) -> bool {
     loop {

@@ -1,4 +1,4 @@
-use crate::app::algebra::{field::Field, finite_field::FiniteField, randomizable::Randomizable};
+use super::{Field, FiniteField, Randomizable};
 
 pub trait DynamicVector: Sized + Clone {
     type Field: Field;

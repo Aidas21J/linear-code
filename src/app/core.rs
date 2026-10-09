@@ -1,6 +1,13 @@
-pub(crate) mod binary_linear_code;
-pub(crate) mod linear_code;
-pub(crate) mod memoryless_channel;
-pub(crate) mod symmetric_channel;
-pub(crate) mod universal_vec_codec;
-pub(crate) mod vec_codec;
+mod binary_linear_code;
+mod linear_code;
+mod memoryless_channel;
+mod symmetric_channel;
+mod universal_vec_codec;
+mod vec_codec;
+
+pub use binary_linear_code::BinaryLinearCode;
+pub use linear_code::LinearCode;
+pub use memoryless_channel::MemorylessChannel;
+pub use symmetric_channel::SymmetricChannel;
+pub use universal_vec_codec::UniversalVecCodec;
+pub use vec_codec::VecCodec;

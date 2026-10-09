@@ -1,4 +1,4 @@
-use super::underlying_set::UnderlyingSet;
+use super::UnderlyingSet;
 
 pub trait Field {
     type Element: UnderlyingSet;

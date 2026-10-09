@@ -1,8 +1,4 @@
-use rand::RngExt as _;
-
-use crate::app::algebra::{finite_field::FiniteField, finite_underlying_set::FiniteUnderlyingSet};
-
-use super::{field::Field, randomizable::Randomizable};
+use super::{Field, FiniteField, FiniteUnderlyingSet, Randomizable};
 
 pub enum F2 {}
 
@@ -110,7 +106,10 @@ impl F2Element {
 impl FiniteUnderlyingSet for F2Element {}
 
 impl Randomizable for F2Element {
-    fn generate_uniform(rng: &mut impl rand::prelude::Rng) -> Self {
+    fn generate_uniform<R>(rng: &mut R) -> Self
+    where
+        R: rand::prelude::Rng + rand::RngExt,
+    {
         F2Element {
             value: rng.random(),
         }

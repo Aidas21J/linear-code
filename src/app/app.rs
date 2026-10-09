@@ -1,15 +1,7 @@
-use crate::app::{
-    algebra::{dmat::DMat, drvec::DRVec, dynamic_matrix::DynamicMatrix as _, f2::F2},
-    analysis_app::AnalysisApp,
-    base_app::BaseApp,
-    buffer_app::BufferApp,
-    core::{
-        binary_linear_code::BinaryLinearCode, linear_code::LinearCode,
-        symmetric_channel::SymmetricChannel, universal_vec_codec::UniversalVecCodec,
-    },
-    image_app::ImageApp,
-    single_vector_app::SingleVectorApp,
-    text_app::TextApp,
+use super::{
+    AnalysisApp, BaseApp, BufferApp, ImageApp, SingleVectorApp, TextApp,
+    algebra::{DMat, DRVec, DynamicMatrix as _, F2},
+    core::{BinaryLinearCode, LinearCode as _, SymmetricChannel, UniversalVecCodec},
     ui,
 };
 

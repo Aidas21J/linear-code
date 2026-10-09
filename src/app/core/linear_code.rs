@@ -1,7 +1,5 @@
 use crate::app::algebra::{
-    dynamic_matrix::DynamicMatrix, dynamic_vector::DynamicVector,
-    dynamic_vector_value_iterator::DynamicVectorValueIterator, field::Field,
-    finite_field::FiniteField, transposable_vector::TransposableTo,
+    DynamicMatrix, DynamicVector, DynamicVectorValueIterator, Field, FiniteField, TransposableTo,
 };
 
 pub trait LinearCode {

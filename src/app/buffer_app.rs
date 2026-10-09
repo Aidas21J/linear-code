@@ -1,7 +1,8 @@
 use crate::app::{
-    algebra::dynamic_vector::error_count,
-    base_app::{BaseApp, log_activity},
-    core::{linear_code::LinearCode, memoryless_channel::MemorylessChannel, vec_codec::VecCodec},
+    BaseApp,
+    algebra::error_count,
+    core::{LinearCode, MemorylessChannel, VecCodec},
+    log_activity,
 };
 
 use rayon::prelude::*;

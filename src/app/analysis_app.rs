@@ -1,11 +1,7 @@
-use crate::app::{
-    algebra::{
-        dynamic_vector::{DynamicVector as _, error_count},
-        field::Field,
-        randomizable::Randomizable,
-    },
-    buffer_app::BufferApp,
-    core::linear_code::LinearCode,
+use super::{
+    BufferApp,
+    algebra::{DynamicVector as _, Field, Randomizable, error_count},
+    core::LinearCode,
     ui,
 };
 

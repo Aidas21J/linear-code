@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::app::{algebra::field::Field, buffer_app::BufferApp, core::linear_code::LinearCode, ui};
+use super::{BufferApp, algebra::Field, core::LinearCode, ui};
 
 use image::{GenericImageView, ImageReader, RgbImage};
 

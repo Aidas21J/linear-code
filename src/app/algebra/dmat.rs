@@ -1,6 +1,4 @@
-use crate::app::algebra::{
-    dcvec::DCVec, drvec::DRVec, dynamic_matrix::DynamicMatrix, field::Field,
-};
+use super::{DCVec, DRVec, DynamicMatrix, Field};
 
 pub struct DMat<F: Field> {
     rows: usize,

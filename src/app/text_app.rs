@@ -1,9 +1,6 @@
 use std::path::Path;
 
-use crate::app::{
-    algebra::field::Field, base_app::log_activity, buffer_app::BufferApp,
-    core::linear_code::LinearCode, ui,
-};
+use super::{BufferApp, algebra::Field, core::LinearCode, log_activity, ui};
 
 pub trait TextApp: BufferApp
 where

@@ -1,24 +1,17 @@
-use std::marker::PhantomData;
+use crate::app::algebra::{DynamicVector, F2, F2Element, Field};
 
-use crate::app::{
-    algebra::{
-        dynamic_vector::DynamicVector,
-        f2::{F2, F2Element},
-        field::Field,
-    },
-    core::vec_codec::VecCodec,
-};
+use super::VecCodec;
 
 pub struct UniversalVecCodec<V: DynamicVector> {
     vec_dim: usize,
-    _vector: PhantomData<V>,
+    _vector: std::marker::PhantomData<V>,
 }
 
 impl<V: DynamicVector> UniversalVecCodec<V> {
     pub const fn new(vec_dim: usize) -> Self {
         Self {
             vec_dim,
-            _vector: PhantomData,
+            _vector: std::marker::PhantomData,
         }
     }
 }

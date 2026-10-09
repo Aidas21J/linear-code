@@ -1,4 +1,4 @@
-use crate::app::algebra::dynamic_vector::DynamicVector;
+use super::DynamicVector;
 
 pub trait TransposableTo<V>: DynamicVector
 where

@@ -1,4 +1,4 @@
-use crate::app::algebra::{dynamic_vector::DynamicVector, field::Field, finite_field::FiniteField};
+use super::{DynamicVector, Field, FiniteField};
 
 pub struct DynamicVectorValueIterator<V: DynamicVector<Field: FiniteField>> {
     next_state: Option<V>,

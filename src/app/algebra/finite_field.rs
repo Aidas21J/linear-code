@@ -1,6 +1,4 @@
-use crate::app::algebra::finite_underlying_set::FiniteUnderlyingSet;
-
-use super::field::Field;
+use super::{Field, FiniteUnderlyingSet};
 
 pub trait FiniteField: Field<Element: FiniteUnderlyingSet> {
     const ORDER: usize;
