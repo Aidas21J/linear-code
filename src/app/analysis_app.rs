@@ -12,9 +12,10 @@ use crate::app::{
 pub trait AnalysisApp: BufferApp + Sync
 where
     <Self::Code as LinearCode>::RowVector: Sync + Send,
+    Self::Channel: std::str::FromStr<Err: std::fmt::Display>,
     <<Self::Code as LinearCode>::Field as Field>::Element: Randomizable,
 {
-    fn analysis_loop(&self) {
+    fn analysis_loop(&mut self) {
         loop {
             eprintln!();
             eprintln!("{}", "#".repeat(100));
@@ -63,6 +64,10 @@ where
 
             if !ui::get_yes_no("Try another sample?", Some(true)) {
                 return;
+            }
+
+            if ui::get_yes_no("Edit channel?", Some(false)) {
+                self.set_channel(ui::get_from_line("p_e"));
             }
         }
     }

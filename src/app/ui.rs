@@ -1,7 +1,4 @@
-use std::{
-    io::{Write as _, stderr, stdin, stdout},
-    str::FromStr,
-};
+use std::io::{Write as _, stderr, stdin, stdout};
 
 use crate::app::algebra::{
     dynamic_matrix::DynamicMatrix, dynamic_vector::DynamicVector, field::Field,
@@ -38,9 +35,11 @@ pub fn get_yes_no(message: &str, default: Option<bool>) -> bool {
     }
 }
 
-pub fn get_from_line<T: FromStr>(message: &str) -> T {
+pub fn get_from_line<T>(message: &str) -> T
+where
+    T: std::str::FromStr<Err: std::fmt::Display>,
+{
     loop {
-        let _ = stdout().flush();
         eprint!("{message}: ");
         let _ = stderr().flush();
 
@@ -53,7 +52,7 @@ pub fn get_from_line<T: FromStr>(message: &str) -> T {
 
         match input_str.trim().parse::<T>() {
             Ok(value) => return value,
-            Err(_) => eprintln!("Failed to parse input. Try again."),
+            Err(e) => eprintln!("Failed to parse input: {e}. Try again."),
         }
     }
 }
@@ -61,7 +60,7 @@ pub fn get_from_line<T: FromStr>(message: &str) -> T {
 pub fn get_row_vector<F, V>(message: &str, expected_cols: usize) -> V
 where
     F: Field,
-    V: DynamicVector<Field = F> + FromStr,
+    V: DynamicVector<Field = F> + std::str::FromStr<Err: std::fmt::Display>,
 {
     loop {
         let v: V = get_from_line(message);
@@ -94,10 +93,9 @@ pub fn get_matrix<F, M>(message: &str, rows: usize, cols: usize) -> M
 where
     F: Field,
     M: DynamicMatrix<Field = F>,
-    F::Element: std::fmt::Display,
+    F::Element: std::fmt::Display + std::str::FromStr<Err: std::fmt::Display>,
 {
-    let mut data: Vec<F::Element> = Vec::new();
-    data.reserve_exact(rows * cols);
+    let mut data: Vec<F::Element> = Vec::with_capacity(rows.saturating_mul(cols));
 
     for _ in 0..rows {
         for _ in 0..cols {

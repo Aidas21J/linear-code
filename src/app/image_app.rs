@@ -8,9 +8,10 @@ pub trait ImageApp: BufferApp + Sync
 where
     <Self::Code as LinearCode>::RowVector: Sync + Send,
     <Self::Code as LinearCode>::RowVector: Clone + std::str::FromStr + std::fmt::Display,
+    Self::Channel: std::str::FromStr<Err: std::fmt::Display>,
     <<Self::Code as LinearCode>::Field as Field>::Element: std::fmt::Display,
 {
-    fn image_loop(&self) {
+    fn image_loop(&mut self) {
         loop {
             eprintln!();
             eprintln!("{}", "#".repeat(100));
@@ -121,6 +122,10 @@ where
 
             if !ui::get_yes_no("Try another image?", Some(true)) {
                 return;
+            }
+
+            if ui::get_yes_no("Edit channel?", Some(false)) {
+                self.set_channel(ui::get_from_line("p_e"));
             }
         }
     }

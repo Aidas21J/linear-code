@@ -7,10 +7,12 @@ use crate::app::{
 
 pub trait SingleVectorApp: BaseApp
 where
-    <Self::Code as LinearCode>::RowVector: Clone + std::str::FromStr + std::fmt::Display,
+    <Self::Code as LinearCode>::RowVector:
+        Clone + std::fmt::Display + std::str::FromStr<Err: std::fmt::Display>,
+    Self::Channel: std::str::FromStr<Err: std::fmt::Display>,
     <<Self::Code as LinearCode>::Field as Field>::Element: std::fmt::Display,
 {
-    fn single_vector_loop(&self) {
+    fn single_vector_loop(&mut self) {
         loop {
             eprintln!();
             eprintln!("{}", "#".repeat(100));
@@ -80,6 +82,10 @@ where
 
             if !ui::get_yes_no("Try another vector?", Some(true)) {
                 return;
+            }
+
+            if ui::get_yes_no("Edit channel?", Some(false)) {
+                self.set_channel(ui::get_from_line("p_e"));
             }
         }
     }

@@ -9,6 +9,8 @@ pub trait BaseApp {
 
     fn code(&self) -> &Self::Code;
     fn channel(&self) -> &Self::Channel;
+
+    fn set_channel(&mut self, channel: Self::Channel);
 }
 
 macro_rules! log_activity {

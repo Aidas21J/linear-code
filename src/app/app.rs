@@ -21,16 +21,7 @@ pub struct App {
 
 impl App {
     pub fn new() -> Self {
-        let p_e: f64 = loop {
-            let p_e_input = ui::get_from_line("p_e");
-            if 0.0 <= p_e_input && p_e_input <= 1.0 {
-                break p_e_input;
-            }
-            eprintln!("Invalid input. p_e has to be between 0 and 1 (inclusive). Try again.");
-        };
-
         let n: usize = ui::get_from_line("n");
-
         let k: usize = loop {
             let k_input = ui::get_from_line("k");
             if k_input > n {
@@ -64,14 +55,14 @@ impl App {
         };
         eprintln!();
 
-        println!("G:");
-        println!("{}", code.generator());
-        println!();
-        println!("H:");
-        println!("{}", code.parity_check());
-        println!();
+        eprintln!("G:");
+        eprintln!("{}", code.generator());
+        eprintln!();
+        eprintln!("H:");
+        eprintln!("{}", code.parity_check());
+        eprintln!();
 
-        let channel = SymmetricChannel::new(p_e);
+        let channel = ui::get_from_line("p_e");
         let vec_codec = UniversalVecCodec::new(code.k());
 
         Self {
@@ -92,6 +83,10 @@ impl BaseApp for App {
 
     fn channel(&self) -> &SymmetricChannel {
         &self.channel
+    }
+
+    fn set_channel(&mut self, channel: Self::Channel) {
+        self.channel = channel;
     }
 }
 

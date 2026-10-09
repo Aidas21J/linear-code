@@ -7,7 +7,7 @@ pub(crate) mod app;
 
 fn main() {
     let args: Vec<_> = std::env::args().collect();
-    let app = App::new();
+    let mut app = App::new();
 
     match args.get(1).map_or("", String::as_str) {
         "" | "vector" => app.single_vector_loop(),
