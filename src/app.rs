@@ -1,4 +1,5 @@
 pub(crate) mod algebra;
+pub(crate) mod analysis_app;
 pub(crate) mod app;
 pub(crate) mod base_app;
 pub(crate) mod buffer_app;

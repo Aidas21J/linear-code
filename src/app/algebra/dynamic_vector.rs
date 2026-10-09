@@ -1,4 +1,4 @@
-use crate::app::algebra::{field::Field, finite_field::FiniteField};
+use crate::app::algebra::{field::Field, finite_field::FiniteField, randomizable::Randomizable};
 
 pub trait DynamicVector: Sized + Clone {
     type Field: Field;
@@ -27,6 +27,14 @@ pub trait DynamicVector: Sized + Clone {
                 .chain(std::iter::once(value))
                 .chain(std::iter::repeat_n(Self::Field::ZERO, zeros_after).into_iter()),
         )
+    }
+
+    fn generate_uniform<R>(dim: usize, rng: &mut R) -> Self
+    where
+        <Self::Field as Field>::Element: Randomizable,
+        R: rand::Rng,
+    {
+        Self::from_iter((0..dim).map(|_| <Self::Field as Field>::Element::generate_uniform(rng)))
     }
 
     fn take(self, cols: usize) -> Self {

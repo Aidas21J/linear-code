@@ -1,5 +1,6 @@
 use crate::app::{
     algebra::{dmat::DMat, drvec::DRVec, dynamic_matrix::DynamicMatrix as _, f2::F2},
+    analysis_app::AnalysisApp,
     base_app::BaseApp,
     buffer_app::BufferApp,
     core::{
@@ -105,3 +106,4 @@ impl BufferApp for App {
 impl SingleVectorApp for App {}
 impl TextApp for App {}
 impl ImageApp for App {}
+impl AnalysisApp for App {}
