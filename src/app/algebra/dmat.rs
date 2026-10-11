@@ -1,5 +1,6 @@
 use super::{DCVec, DRVec, DynamicMatrix, Field};
 
+/// Dynamic matrix type.
 pub struct DMat<F: Field> {
     rows: usize,
     cols: usize,
@@ -13,36 +14,45 @@ impl<F: Field> DynamicMatrix for DMat<F> {
 
     type ColVector = DCVec<F>;
 
+    /// Iterate through elements in row-major order.
+    ///
+    /// Returns immutable iterator over matrix data.
     fn flat_iter(&self) -> impl ExactSizeIterator<Item = &<Self::Field as Field>::Element> {
         self.data.iter()
     }
 
+    /// Iterate (and mutate) through elements in row-major order.
+    ///
+    /// Returns mutable iterator over matrix data.
     fn flat_iter_mut(
         &mut self,
     ) -> impl ExactSizeIterator<Item = &mut <Self::Field as Field>::Element> {
         self.data.iter_mut()
     }
 
-    fn into_flat_iter(self) -> impl ExactSizeIterator<Item = <Self::Field as Field>::Element> {
-        self.data.into_iter()
-    }
-
+    /// Iterate through rows.
+    ///
+    /// Returns an iterator over matrix rows.
     fn rows_iter(&self) -> std::slice::ChunksExact<'_, <Self::Field as Field>::Element> {
         self.data.chunks_exact(self.cols())
     }
 
-    fn rows_iter_mut(&mut self) -> std::slice::ChunksExactMut<'_, <Self::Field as Field>::Element> {
-        self.data.chunks_exact_mut(self.cols)
-    }
-
+    /// Get row count.
     fn rows(&self) -> usize {
         self.rows
     }
 
+    /// Get column count.
     fn cols(&self) -> usize {
         self.cols
     }
 
+    /// Construct matrix from an iterator.
+    ///
+    /// Takes row count `rows` and row-major element iterator `data`.
+    ///
+    /// Returns new matrix if it's possible to divide `data` elements into `rows` number
+    /// of rows. Otherwise, `None` is returned.
     fn from_data<I>(rows: usize, data: I) -> Option<Self>
     where
         I: IntoIterator<Item = <Self::Field as Field>::Element>,
@@ -57,6 +67,12 @@ impl<F: Field> DynamicMatrix for DMat<F> {
         Some(Self { rows, cols, data })
     }
 
+    /// Construct matrix from iterator.
+    ///
+    /// Takes row count `rows` and row-major element iterator `data`. `data` length must be
+    /// divisible by `rows`.
+    ///
+    /// Returns new matrix with `data` elements.
     fn from_data_unchecked<I>(rows: usize, data: I) -> Self
     where
         I: IntoIterator<Item = <Self::Field as Field>::Element>,
@@ -67,6 +83,12 @@ impl<F: Field> DynamicMatrix for DMat<F> {
         Self { rows, cols, data }
     }
 
+    /// Construct matrix from generator function.
+    ///
+    /// Takes row count `rows`, column count `cols` and generator function `generate` what maps row
+    /// index and column index to element value.
+    ///
+    /// Returns new matrix where each element was generated using `generate`.
     fn generate<GF>(rows: usize, cols: usize, mut generate: GF) -> Self
     where
         GF: FnMut(usize, usize) -> <Self::Field as Field>::Element,
@@ -79,12 +101,6 @@ impl<F: Field> DynamicMatrix for DMat<F> {
         Self { rows, cols, data }
     }
 }
-
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Matrix formatting ---------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
 
 impl<F: Field> std::fmt::Debug for DMat<F>
 where
@@ -118,12 +134,6 @@ where
         write!(f, "{self_str}")
     }
 }
-
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Matrix cloning ------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
 
 impl<F: Field> Clone for DMat<F> {
     fn clone(&self) -> Self {

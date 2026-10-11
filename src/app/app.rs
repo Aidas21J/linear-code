@@ -5,13 +5,35 @@ use super::{
     ui,
 };
 
+/// Main app object.
 pub struct App {
+    /// Linear code used for coding.
     code: BinaryLinearCode,
+    /// Channel that the data is sent through.
     channel: SymmetricChannel,
+    /// Vector codec for parsing to and from raw bytes.
     vec_codec: UniversalVecCodec<DRVec<F2>>,
 }
 
 impl App {
+    /// Create new app.
+    ///
+    /// First, the user to input code length `n` and dimension `k`.
+    ///
+    /// Second, the user is asked whether they want to put in a custom generator matrix or to have a
+    /// random generator matrix. This is how the parity part (generator matrix except identity
+    /// columns) is created:
+    ///     - If the user wants a random matrix, random parity part is generated for them.
+    ///     - If the user wants a custom matrix, they are asked to put in every element of the
+    ///     parity part one by one.
+    /// The final parity part is joined to the identity part and the generator matrix (and later the
+    /// whole linear code) is constructed.
+    ///
+    /// Lastly, the user is asked for the error probability and the app's symmetric channel is
+    /// constructed from that.
+    ///
+    /// Note: vector codec is always the same and is constructed automatically under the hood every
+    /// time.
     pub fn new() -> Self {
         let n: usize = ui::get_from_line("n");
         let k: usize = loop {
@@ -69,14 +91,19 @@ impl BaseApp for App {
     type Code = BinaryLinearCode;
     type Channel = SymmetricChannel;
 
+    /// Return a reference to app's code.
     fn code(&self) -> &BinaryLinearCode {
         &self.code
     }
 
+    /// Return a reference to app's channel.
     fn channel(&self) -> &SymmetricChannel {
         &self.channel
     }
 
+    /// Sets app's channel.
+    ///
+    /// Takes new `channel` and replaces the old one with it.
     fn set_channel(&mut self, channel: Self::Channel) {
         self.channel = channel;
     }
@@ -85,6 +112,7 @@ impl BaseApp for App {
 impl BufferApp for App {
     type VecCodec = UniversalVecCodec<DRVec<F2>>;
 
+    /// Return a reference to app's vector codec.
     fn vec_codec(&self) -> &Self::VecCodec {
         &self.vec_codec
     }

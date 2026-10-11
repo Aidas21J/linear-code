@@ -1,24 +1,40 @@
 use super::{DCVec, DynamicVector, Field, TransposableTo};
 
+/// Dynamic row vector.
 pub struct DRVec<F: Field> {
+    /// Vector of [`DRVec`] elements.
     data: Vec<F::Element>,
 }
 
 impl<F: Field> DynamicVector for DRVec<F> {
     type Field = F;
 
+    /// Iterate vector elements.
+    ///
+    /// Returns immutable iterator over vector data.
     fn iter(&self) -> impl ExactSizeIterator<Item = &<Self::Field as Field>::Element> {
         self.data.iter()
     }
 
+    /// Iterate (and mutate) vector elements.
+    ///
+    /// Returns mutable iterator over vector data.
     fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut <Self::Field as Field>::Element> {
         self.data.iter_mut()
     }
 
+    /// Iterate and consume vector elements.
+    ///
+    /// Returns into iterator over vector data.
     fn into_iter(self) -> impl ExactSizeIterator<Item = <Self::Field as Field>::Element> {
         self.data.into_iter()
     }
 
+    /// Create vector from an iterator of elements.
+    ///
+    /// Takes an element iterator `data`.
+    ///
+    /// Returns a vector with those elements.
     fn from_iter<I>(data: I) -> Self
     where
         I: IntoIterator<Item = <Self::Field as Field>::Element>,
@@ -28,6 +44,12 @@ impl<F: Field> DynamicVector for DRVec<F> {
         }
     }
 
+    /// Create vector where exactly one element is non-zero and is equal to `value`.
+    ///
+    /// Takes `zeros_before`, `zeros_after` and `value`.
+    ///
+    /// Returns vector of the form (0, ..., 0, value, 0, ..., 0) with exactly `zeros_before` zeros
+    /// to the left of `value` element and with exactly `zeros_after` zeros to the right.
     fn e(zeros_before: usize, zeros_after: usize, value: <Self::Field as Field>::Element) -> Self {
         let mut data = vec![F::ZERO; zeros_before + 1 + zeros_after];
         data[zeros_before] = value;
@@ -37,12 +59,6 @@ impl<F: Field> DynamicVector for DRVec<F> {
 }
 
 impl<F: Field> TransposableTo<DCVec<F>> for DRVec<F> {}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Row vector formatting -----------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
 
 impl<F: Field> std::fmt::Debug for DRVec<F>
 where
@@ -80,12 +96,6 @@ impl<F: Field> std::str::FromStr for DRVec<F> {
         ))
     }
 }
-
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// Row vector cloning --------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------------------------------------
 
 impl<F: Field> Clone for DRVec<F> {
     fn clone(&self) -> Self {

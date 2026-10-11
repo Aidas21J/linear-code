@@ -2,6 +2,11 @@ use std::io::{Write as _, stderr, stdin, stdout};
 
 use super::algebra::{DynamicMatrix, DynamicVector, Field};
 
+/// Asks user yes or no question.
+///
+/// Takes in message/question to the user `message` and default answer (if there is one) `default`.
+///
+/// Returns `true` if user selected "yes" and `false` if user selected "no".
 pub fn get_yes_no(message: &str, default: Option<bool>) -> bool {
     loop {
         let _ = stdout().flush();
@@ -33,6 +38,11 @@ pub fn get_yes_no(message: &str, default: Option<bool>) -> bool {
     }
 }
 
+/// Asks user to input `T` in a single line.
+///
+/// Takes in message to the user `message`.
+///
+/// Returns the parsed value.
 pub fn get_from_line<T>(message: &str) -> T
 where
     T: std::str::FromStr<Err: std::fmt::Display>,
@@ -55,6 +65,11 @@ where
     }
 }
 
+/// Asks user to input a row vector of an expected dimension.
+///
+/// Takes in message to the user `message` and expected number of columns `expected_cols`.
+///
+/// Returns the parsed row vector with exactly `expected_cols` columns.
 pub fn get_row_vector<F, V>(message: &str, expected_cols: usize) -> V
 where
     F: Field,
@@ -71,6 +86,17 @@ where
     }
 }
 
+/// Constructs error `String` for two vectors.
+///
+/// Takes vectors `a` and `b`, markers `match_marker` and `error_marker`.
+///
+/// Returns formatted error `String`.
+///
+/// # Example
+///
+/// If `a` is `001`, b is `011`, `match_marker` is `"+"`, `error_marker` is `"-"`, then the output
+/// would be `"+-+"`, because the first and the third places of `a` and `b` match and the second
+/// does not.
 pub fn vector_error_string<F, V>(a: &V, b: &V, match_marker: &str, error_marker: &str) -> String
 where
     F: Field,
@@ -87,6 +113,14 @@ where
         .collect()
 }
 
+/// Gets a matrix input from the user.
+///
+/// Takes in message to the user `message` and the number expected rows `rows` and columns `cols`.
+///
+/// Function goes through every element one by one marking its place for the user and asking for its
+/// value.
+///
+/// Returns the matrix user put in.
 pub fn get_matrix<F, M>(message: &str, rows: usize, cols: usize) -> M
 where
     F: Field,

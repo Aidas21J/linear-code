@@ -1,20 +1,66 @@
 use super::{DynamicVector, Field, FiniteField};
 
+/// Iterator that goes through every possible value of a [`DynamicVector`] over a [`FiniteField`]
+/// `F`.
 pub struct DynamicVectorValueIterator<V: DynamicVector<Field: FiniteField>> {
+    /// `DynamicVector` to go to next.
     next_state: Option<V>,
 }
 
 impl<V: DynamicVector<Field: FiniteField>> DynamicVectorValueIterator<V> {
-    pub fn new(cols: usize) -> Self {
+    /// Create new vector value iterator for vectors of dimension `dim`. Iterator starts from zero
+    /// vector.
+    pub fn new(dim: usize) -> Self {
         Self {
-            next_state: V::zeros(cols).into(),
+            next_state: V::zeros(dim).into(),
         }
     }
 }
 
 impl<V: DynamicVector<Field: FiniteField>> Iterator for DynamicVectorValueIterator<V> {
+    /// Set iterator item type to the vector type.
     type Item = V;
 
+    /// Go to next iteration state of [`DynamicVectorValueIterator`].
+    ///
+    /// Let the iterator [`DynamicVector`] type be `V`.
+    /// Let `V` be a vector over a [`FiniteField`] `F`.
+    /// Let the order of `F` be `q`.
+    ///
+    /// Currently, the iterator is going through all values in reverse lexicographic order, i.e. it
+    /// starts with zero vector then goes to vector with one at the start and zeros in all other
+    /// places, etc.
+    ///
+    /// Elements in the iterator cycle like this:
+    ///     0 -> 1 -> alpha -> alpha^2 -> ... -> alpha^(`q` - 2) -> 0
+    /// where alpha is the generator (primitive element) of `F`.
+    ///
+    /// # Example
+    ///
+    /// If `V` is a two-dimensional binary row vector, the iterator will go through vectors in this
+    /// order:
+    ///     1) (0 0)
+    ///     2) (1 0)
+    ///     3) (0 1)
+    ///     4) (1 1)
+    ///
+    /// If `V` is a two-dimensional row vector over GF(8), the iterator will go through vectors in
+    /// this order:
+    ///     1)  (0       0)
+    ///     2)  (1       0)
+    ///     3)  (alpha   0)
+    ///     4)  (alpha^2 0)
+    ///     ...
+    ///     8)  (alpha^6 0)
+    ///     9)  (0       1)
+    ///     10) (1       1)
+    ///     11) (alpha   1)
+    ///     12) (alpha^2 1)
+    ///     ...
+    ///     62) (alpha^4 alpha^6)
+    ///     63) (alpha^5 alpha^6)
+    ///     64) (alpha^6 alpha^6)
+    /// where alpha is the generator of GF(8).
     fn next(&mut self) -> Option<Self::Item> {
         let current_state = self.next_state.clone()?;
         let mut next_state = current_state.clone();

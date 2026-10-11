@@ -7,14 +7,21 @@ use crate::app::{
 
 use rayon::prelude::*;
 
+/// Represents an app that works with byte buffers.
 pub trait BufferApp: BaseApp + Sync
 where
     <Self::Code as LinearCode>::RowVector: Sync + Send,
 {
     type VecCodec: VecCodec<<Self::Code as LinearCode>::RowVector>;
 
+    /// Returns a reference to the vector codec.
     fn vec_codec(&self) -> &Self::VecCodec;
 
+    /// Sends vectors through app's channel without using error-correcting code.
+    ///
+    /// Takes vector buffer `input`.
+    ///
+    /// Returns `input` that was just sent through the app's channel.
     fn send_vecs_without_coding(
         &self,
         input: &Vec<<Self::Code as LinearCode>::RowVector>,
@@ -26,6 +33,14 @@ where
             .collect()
     }
 
+    /// Sends vectors through app's channel using app's error-correcting code.
+    ///
+    /// Takes vector buffer `input`.
+    ///
+    /// Returns `input` that was:
+    ///     1) encoded using app's code,
+    ///     2) sent through app's channel,
+    ///     3) decoded using the same code.
     fn send_vecs_with_coding(
         &self,
         input: &Vec<<Self::Code as LinearCode>::RowVector>,
@@ -38,6 +53,17 @@ where
             .collect()
     }
 
+    /// Abstract function that does the cycle of:
+    ///     1) Parsing received bytes to vectors.
+    ///     2) Sending those bytes (with or without coding) through the app's channel.
+    ///     3) Counting number of errors that have occurred.
+    ///     4) Parsing the output back to bytes.
+    ///     5) Returning output bytes along with the error count.
+    ///
+    /// Takes byte buffer `bytes` and a `bool` representing whether to use the error-correcting code
+    /// `code`.
+    ///
+    /// Returns output bytes and the error count.
     fn send_bytes(&self, bytes: Vec<u8>, code: bool) -> (Vec<u8>, usize) {
         let (input_vecs, pad_size) = log_activity!(
             "Parsing from bytes to vectors...",

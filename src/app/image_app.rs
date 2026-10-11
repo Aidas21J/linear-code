@@ -4,6 +4,7 @@ use super::{BufferApp, algebra::Field, core::LinearCode, ui};
 
 use image::{GenericImageView, ImageReader, RgbImage};
 
+/// App that works with image input and output.
 pub trait ImageApp: BufferApp + Sync
 where
     <Self::Code as LinearCode>::RowVector: Sync + Send,
@@ -11,6 +12,15 @@ where
     Self::Channel: std::str::FromStr<Err: std::fmt::Display>,
     <<Self::Code as LinearCode>::Field as Field>::Element: std::fmt::Display,
 {
+    /// App's main loop. It consists of:
+    ///     1) Getting image filename from user and parsing the raw RGB bytes from it.
+    ///     2) Sending input through channel without coding it and saving the result to a different
+    ///        image file.
+    ///     3) Doing exactly the same as (2), but sending input through channel with coding and
+    ///        saving the output to a different (both from the original and (2)) file.
+    ///     4) Printing error counts of not coded and coded versions.
+    ///     5) Asking user whether they want another iteration.
+    ///     6) Letting user to edit the channel before next iteration.
     fn image_loop(&mut self) {
         loop {
             eprintln!();

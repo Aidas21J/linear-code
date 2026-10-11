@@ -5,6 +5,7 @@ use crate::app::{
     ui,
 };
 
+/// App for working with single vectors.
 pub trait SingleVectorApp: BaseApp
 where
     <Self::Code as LinearCode>::RowVector:
@@ -12,6 +13,13 @@ where
     Self::Channel: std::str::FromStr<Err: std::fmt::Display>,
     <<Self::Code as LinearCode>::Field as Field>::Element: std::fmt::Display,
 {
+    /// App's main loop. It consists of:
+    ///     1) Getting vector from the user.
+    ///     2) Encoding and sending it through channel.
+    ///     3) Showing what was received and (if the user wants) letting to edit it.
+    ///     4) Decoding and showing final output with some stats.
+    ///     5) Asking user whether they want another iteration.
+    ///     6) Letting user to edit the channel before next iteration.
     fn single_vector_loop(&mut self) {
         loop {
             eprintln!();

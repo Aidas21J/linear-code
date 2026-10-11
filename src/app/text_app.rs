@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::{BufferApp, algebra::Field, core::LinearCode, log_activity, ui};
 
+/// App that works with text input and output.
 pub trait TextApp: BufferApp
 where
     <Self::Code as LinearCode>::RowVector: Sync + Send,
@@ -9,6 +10,17 @@ where
     Self::Channel: std::str::FromStr<Err: std::fmt::Display>,
     <<Self::Code as LinearCode>::Field as Field>::Element: std::fmt::Display,
 {
+    /// App's main loop. It consists of:
+    ///     1) Getting text from user either from file or console (console accepts only a single
+    ///        line).
+    ///     2) Sending input through channel without coding it and outputting the result. If the
+    ///        input was taken from a file, then it is saved to a file. If the input was taken from
+    ///        console then the output is printed to it as well.
+    ///     3) Doing exactly the same as (2), but sending input through channel with coding and (if
+    ///        input was from a file) saving output to a different file.
+    ///     4) Printing error counts of not coded and coded versions.
+    ///     5) Asking user whether they want another iteration.
+    ///     6) Letting user to edit the channel before next iteration.
     fn text_loop(&mut self) {
         loop {
             eprintln!();
@@ -92,6 +104,15 @@ where
     }
 }
 
+/// Gets text input from user.
+///
+/// The user is asked whether to read the input from a file or from console (console only allows one
+/// line inputs). If the user wants input from console, they are asked to enter the text into the
+/// console. If the user wants input from a file, they are asked to enter the path to the file. That
+/// file is read and the contents are stored.
+///
+/// Returns tuple where first member is the text (from a file or not) and the second is the filename
+/// to the file or `None` if input came from the console.
 fn get_text_input() -> (String, Option<String>) {
     loop {
         if !ui::get_yes_no("Read from file?", None) {
@@ -124,6 +145,15 @@ fn get_text_input() -> (String, Option<String>) {
     }
 }
 
+/// Outputs the text input to appropriate text file.
+///
+/// Takes original filename without extension `filename_without_extension`, raw output bytes
+/// `output_text` and `bool` representing whether coding was used for sending through the channel
+/// `code`.
+///
+/// Output filename is kept the same but with added extension to signify whether it's the coded or
+/// not coded output. For example, if original file was original.txt, then the coded output will be
+/// saved to original-with-coding.txt and the not coded to original-without-coding.txt.
 fn output_text_to_file(filename_without_extension: String, output_text: Vec<u8>, code: bool) {
     let filepath = if code {
         format!("{filename_without_extension}-with-coding.txt")

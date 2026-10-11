@@ -5,12 +5,20 @@ use super::{
     ui,
 };
 
+/// App for analysing its code properties.
 pub trait AnalysisApp: BufferApp + Sync
 where
     <Self::Code as LinearCode>::RowVector: Sync + Send,
     Self::Channel: std::str::FromStr<Err: std::fmt::Display>,
     <<Self::Code as LinearCode>::Field as Field>::Element: Randomizable,
 {
+    /// App's main loop. It consists of:
+    ///     1) Asking the number of vectors to use `vec_count`.
+    ///     2) Generating `vec_count` vectors and sending them through app's channel with app's
+    ///        coding and calculating the number of errors.
+    ///     3) Printing the count and the proportion of errors.
+    ///     4) Asking user whether they want another iteration.
+    ///     5) Letting user to edit the channel before next iteration.
     fn analysis_loop(&mut self) {
         loop {
             eprintln!();
@@ -19,16 +27,16 @@ where
             eprintln!("{}", "#".repeat(100));
             eprintln!();
 
-            let byte_count: usize = ui::get_from_line("Enter number of bytes");
+            let vec_count: usize = ui::get_from_line("Enter number of vectors");
             let vec_dim = self.code().k();
-            let bit_count: usize = byte_count * vec_dim;
+            let element_count: usize = vec_count * vec_dim;
 
             let error_count = {
                 let input_vecs = {
                     let mut rng = rand::rng();
-                    let mut input_vecs = Vec::with_capacity(byte_count);
+                    let mut input_vecs = Vec::with_capacity(vec_count);
 
-                    for _ in 0..byte_count {
+                    for _ in 0..vec_count {
                         input_vecs.push(<Self::Code as LinearCode>::RowVector::generate_uniform(
                             vec_dim, &mut rng,
                         ));
@@ -41,7 +49,7 @@ where
 
                 error_count(input_vecs.iter(), output_vecs.iter())
             };
-            let error_proportion: f64 = error_count as f64 / bit_count as f64;
+            let error_proportion: f64 = error_count as f64 / element_count as f64;
 
             eprintln!();
             eprintln!("{}", "-".repeat(100));

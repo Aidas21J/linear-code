@@ -2,47 +2,69 @@ use super::{DynamicVector, Field, Randomizable, TransposableTo};
 
 type Scalar<M> = <<M as DynamicMatrix>::Field as Field>::Element;
 
-#[expect(unused)]
+/// Abstract dynamic (resizable at runtime) matrix.
 pub trait DynamicMatrix: Sized {
     type Field: Field;
 
     type RowVector: DynamicVector<Field = Self::Field> + TransposableTo<Self::ColVector>;
     type ColVector: DynamicVector<Field = Self::Field> + TransposableTo<Self::RowVector>;
 
+    /// Iterate through elements in row-major order.
     fn flat_iter(&self) -> impl ExactSizeIterator<Item = &Scalar<Self>>;
+    /// Iterate (and mutate) through elements in row-major order.
     fn flat_iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut Scalar<Self>>;
-    fn into_flat_iter(self) -> impl ExactSizeIterator<Item = Scalar<Self>>;
 
+    /// Iterate through rows.
     fn rows_iter(&self) -> std::slice::ChunksExact<'_, Scalar<Self>>;
-    fn rows_iter_mut(&mut self) -> std::slice::ChunksExactMut<'_, Scalar<Self>>;
 
+    /// Get row count.
     fn rows(&self) -> usize;
+    /// Get column count.
     fn cols(&self) -> usize;
 
+    /// Get dimensions.
+    ///
+    /// Returns (row count, column count) tuple.
     fn dims(&self) -> (usize, usize) {
         (self.rows(), self.cols())
     }
 
+    /// Construct matrix from an iterator.
+    ///
+    /// Takes row count `rows` and row-major element iterator `data`.
+    ///
+    /// Returns new matrix if it's possible to divide `data` elements into `rows` number
+    /// of rows. Otherwise, `None` is returned.
     fn from_data<I>(rows: usize, data: I) -> Option<Self>
     where
         I: IntoIterator<Item = <Self::Field as Field>::Element>;
 
+    /// Construct matrix from iterator.
+    ///
+    /// Takes row count `rows` and row-major element iterator `data`. `data` length must be
+    /// divisible by `rows`.
+    ///
+    /// Returns new matrix with `data` elements.
     fn from_data_unchecked<I>(rows: usize, data: I) -> Self
     where
         I: IntoIterator<Item = <Self::Field as Field>::Element>;
 
+    /// Construct matrix from generator function.
+    ///
+    /// Takes row count `rows`, column count `cols` and generator function `generate` what maps row
+    /// index and column index to element value.
+    ///
+    /// Returns new matrix where each element was generated using `generate`.
     fn generate<F>(rows: usize, cols: usize, generate: F) -> Self
     where
         F: FnMut(usize, usize) -> Scalar<Self>;
 
-    fn from_value(rows: usize, cols: usize, value: Scalar<Self>) -> Self {
-        Self::generate(rows, cols, |_, _| value.clone())
-    }
-
-    fn zeros(rows: usize, cols: usize) -> Self {
-        Self::from_value(rows, cols, Self::Field::ZERO)
-    }
-
+    /// Construct identity matrix.
+    ///
+    /// Takes dimension `dim`.
+    ///
+    /// Returns new square matrix of size `dim` with 1s in the main diagonal and 0s elsewhere, i.e.
+    /// identity matrix.
     fn identity(dim: usize) -> Self {
         Self::generate(dim, dim, |x, y| {
             if x == y {
@@ -53,6 +75,11 @@ pub trait DynamicMatrix: Sized {
         })
     }
 
+    /// Generates uniformly random matrix.
+    ///
+    /// Takes row count `rows`, column count `cols` and reference to random number generator `rng`.
+    ///
+    /// Returns matrix with uniformly random entries.
     fn generate_uniform<R>(rows: usize, cols: usize, rng: &mut R) -> Self
     where
         Scalar<Self>: Randomizable,
@@ -63,6 +90,11 @@ pub trait DynamicMatrix: Sized {
         })
     }
 
+    /// Joins two matrices side-by-side.
+    ///
+    /// Takes matrices `a` and `b`.
+    ///
+    /// Returns combined matrix (`a` | `b`).
     fn join(a: &Self, b: &Self) -> Self {
         debug_assert_eq!(
             a.rows(),
@@ -78,6 +110,12 @@ pub trait DynamicMatrix: Sized {
         )
     }
 
+    /// Splits off the end of each matrix row.
+    ///
+    /// Takes column to split off count `cols`.
+    ///
+    /// Returns matrix with at least `cols` less columns. If `cols` is greater than the number of
+    /// matrix columns, an empty matrix is returned.
     fn split_off(&self, cols: usize) -> Self {
         let skip_cols = self.cols().saturating_sub(cols);
 
@@ -90,6 +128,7 @@ pub trait DynamicMatrix: Sized {
         )
     }
 
+    /// Returns new transposed matrix.
     fn transpose(&self) -> Self {
         Self::from_data_unchecked(
             self.cols(),
@@ -103,12 +142,18 @@ pub trait DynamicMatrix: Sized {
         )
     }
 
+    /// Negates the matrix.
     fn neg(mut self) -> Self {
         self.flat_iter_mut()
             .for_each(|element| *element = Self::Field::neg(element.clone()));
         self
     }
 
+    /// Multiplies a row vector by a matrix.
+    ///
+    /// Takes row vector `vec` and matrix `mat`.
+    ///
+    /// Returns `vec` * `mat`.
     fn mul_row(vec: &Self::RowVector, mat: &Self) -> Self::RowVector {
         debug_assert_eq!(
             vec.dim(),
@@ -128,6 +173,11 @@ pub trait DynamicMatrix: Sized {
         res
     }
 
+    /// Multiplies a matrix by a column vector.
+    ///
+    /// Takes matrix `mat` and column vector `vec`.
+    ///
+    /// Returns `mat` * `vec`.
     fn mul_col(mat: &Self, vec: &Self::ColVector) -> Self::ColVector {
         debug_assert_eq!(
             mat.cols(),
